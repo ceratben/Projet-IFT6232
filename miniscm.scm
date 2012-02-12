@@ -29,6 +29,7 @@
 		     (gen-parameter (+ fs index))
 		     index)
 		 )
+	       ;;; retourne un litéral?
                (error "undefined variable" expr))))
 
 	;;; call
@@ -40,7 +41,6 @@
 	     (cons 
 	       (comp-expr (cadr expr) fs (append cte env))
 	       (comp-expr (cons 'begin (cddr expr)) fs (append cte env)))
-	     
 	  ))
 
 	;;; let

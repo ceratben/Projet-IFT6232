@@ -6,13 +6,14 @@
 (define parser
   (lalr-parser
    
-   (STRING BOOL SYM INTEGER IDENT |(| |)|) ;; tokens
+   (STRING BOOL SYM LIST_SYM INTEGER IDENT |(| |)|) ;; tokens
 
    (datum (INTEGER)        : $1
           (IDENT)          : $1
 	  (STRING)         : $1
 	  (BOOL)           : $1
 	  (SYM)            : $1
+	  (LIST_SYM)       : $1
           (|(| datums |)|) : $2
    )
 

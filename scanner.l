@@ -14,7 +14,7 @@ text   [^"]*
 {sign}?{digit}+  (cons 'INTEGER (string->number yytext))
 \"{text}\"       (cons 'STRING yytext)
 "'"{ident}       (cons 'SYM (string->symbol yytext))
-"'("{text}")"    (cons 'SYM (string->symbol yytext))
+"'("{text}")"    (cons 'LIST_SYM (string->symbol yytext))
 {ident}          (cons 'IDENT   (string->symbol yytext))
 "("              (cons '|(|     #f)
 ")"              (cons '|)|     #f)
