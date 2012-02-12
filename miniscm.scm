@@ -30,9 +30,7 @@
 		     index)
 		 )
 	       ;;; retourne un litéral?
-               (error "undefined variable" expr))))
-
-	;;; call
+               (error "undefined variable" expr))))	
 	
 	;;; begin: Utilise env+cte au lieu de cte pour inclure les definitions precedentes dans la seq.
 	((and (list? expr) (eq? (car expr) 'begin))
@@ -78,8 +76,7 @@
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'lambda))
 	 ;;; do something
-        )
-
+	 (gen-lambda (list-ref expr 1) (comp-expr (list-ref expr 2) fs cte)))
 
         ((and (list? expr)
               (= (length expr) 3)
@@ -92,6 +89,11 @@
             ((/) "idiv"))
           (comp-expr (list-ref expr 2) fs cte)
           (comp-expr (list-ref expr 1) (+ fs 1) cte)))
+
+	;;; call
+	((list? expr)
+	 (let ((data (map (lambda (x) (comp-expr x fs cte))))) 
+	 (gen-call  (car data) (cdr data))))
 
         (else
          (error "comp-expr cannot handle expression"))))
@@ -106,6 +108,9 @@
        name ":\n"
        code
        "    ret\n"))
+
+(define (gen-lambda args body) "")            ;;; to implement
+(define (gen-call fun args) "")              ;;; to implement
 
 (define (gen-bin-op oper opnd1 opnd2)
   (gen opnd1
