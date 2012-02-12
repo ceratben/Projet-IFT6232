@@ -3,13 +3,14 @@
 ;;; File: "miniscm.scm"
 
 ;;; Translation of AST to machine code
+(define env '((argc . 1)))
 
 (define (translate ast)
   (comp-function "_main" ast))
 
 (define (comp-function name expr)
   (gen-function name
-                (comp-expr expr 0 '((argc . 1)))))
+                (comp-expr expr 0 env)))
 
 (define (comp-expr expr fs cte) ;; fs = frame size
                                 ;; cte = compile time environment
@@ -17,13 +18,32 @@
   (cond ((number? expr)
          (gen-literal expr))
 
+	((string? expr)
+	 (begin (pp expr) '()))
+
         ((symbol? expr)
          (let ((x (assoc expr cte)))
            (if x
                (let ((index (cdr x)))
-                 (gen-parameter (+ fs index)))
+		 (if (number? index)
+		     (gen-parameter (+ fs index))
+		     index)
+		 )
                (error "undefined variable" expr))))
 
+	;;; call
+	
+	;;; begin: Utilise env+cte au lieu de cte pour inclure les definitions precedentes dans la seq.
+	((and (list? expr) (eq? (car expr) 'begin))
+	 (if (= (length expr) 2)
+	     (comp-expr (cadr expr) fs cte)
+	     (cons 
+	       (comp-expr (cadr expr) fs (append cte env))
+	       (comp-expr (cons 'begin (cddr expr)) fs (append cte env)))
+	     
+	  ))
+
+	;;; let
         ((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'let))
@@ -36,6 +56,30 @@
                                (cons (cons (list-ref binding 0)
                                            (- (+ fs 1)))
                                      cte)))))
+
+	;;; define
+	((and (list? expr)
+              (= (length expr) 3)
+              (eq? (list-ref expr 0) 'define))
+         
+	      (let ((token (list-ref expr 1)) (bind (list-ref expr 2))) 
+	      ;;; cons une paire et l'ajouter dans un dict de def? 
+		(begin
+		  (set! env (append (cons (cons token (comp-expr bind fs cte)) '()) cte))
+	          ;;; pour tester sinon: '()
+		  ;;;(pp cte)
+		  ;;;(pp (cdr (assoc token cte)))
+		  (comp-expr bind fs cte)
+	)))
+
+
+	;;; lambda
+        ((and (list? expr)
+              (= (length expr) 3)
+              (eq? (list-ref expr 0) 'lambda))
+	 ;;; do something
+        )
+
 
         ((and (list? expr)
               (= (length expr) 3)
