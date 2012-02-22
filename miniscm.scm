@@ -81,6 +81,23 @@
     ((= k 0) (set-car! l obj))
     (else (list-set! (cdr l) (- k 1) obj))))
 
+(define (flatten lst)
+  (cond 
+    ((null? lst)
+      '())
+    ((list? (car lst))
+      (append (flatten (car lst)) (flatten (cdr lst))))
+    (else
+      (cons (car lst) (flatten (cdr lst))))))
+
+;;; fold parce que je ne le trouve pas
+(define foldl 
+  (lambda (f i l)
+    (if (null? l) i (foldl f (f i (car l)) (cdr l)))
+    ))
+
+
+
 ;;; Executing define:
 
 (define defining 
@@ -145,7 +162,7 @@
 
 (define (comp-expr expr fs cte rte) ;; fs = frame size
                                     ;; cte = compile time environment
-
+                                    ;; rte = run time environment
   (cond ((number? expr)
          (gen-literal expr))
 
@@ -170,15 +187,9 @@
 	 (let ((c-expr (map (lambda (x) (comp-expr x fs cte rte)) (cdr expr)))) 
 	   (gen-if (cadr c-expr) (caddr c-expr) (cadddr expr))))
 
-	;;; begin à bouclifier.
+	;;; begin
 	((and (list? expr) (eq? (car expr) 'begin))
-	 (let ((ret '())) (begin
-	   (let loop ((n 1))
-	       (and (< n (length expr))
-		   (begin
-		     (set! ret (append (cons (comp-expr(list-ref expr n) fs cte rte) '()) ret))
-		     (loop (+ n 1)))
-		   ))) ret))
+	    (flatten (map (lambda (x) (comp-expr x fs cte rte)) (cdr expr))))
 
 	;;; let to change
         ((and (list? expr)
