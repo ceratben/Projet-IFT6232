@@ -1,3 +1,4 @@
+
 #include <stdio.h> 
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,9 +7,9 @@
 typedef ssize_t word;
 #define BLOCK_SIZE (3)
 
-#define BOX(p) ((p)<<1 | 0x01)
-#define UNBOX(p) ((p)>>1)
-#define HEADERISE(p) ((p)<<2 | 0x02)
+#define BOX(p) ((p)<<2 | 0x01)
+#define UNBOX(p) ((p)>>2)
+#define HEADERISE(p) ((p)<<2 | 0x03)
 
 
 #define IS_POINTER(p) ((p & 0x01) == 0)
@@ -32,7 +33,7 @@ typedef struct pile{
   struct wagon ** content; 
 } Pile;
 
-#define GCPRO( var_ref, local_name ) Pile local_name; local_name.current = &var_ref; local_name.previous = gcstack; gcstack = &local_name;
+#define GCPRO( var_ref, local_name ) Pile local_name; local_name.content = &var_ref; local_name.previous = gcstack; gcstack = &local_name;
 #define UNGCPRO(local_name) ( gcstack = local_name.previous )
 
 // Global Vars
@@ -53,74 +54,131 @@ void memPrint(){
   printf("add        header     car        cdr        next       previous\n");
 
   do{
-    if(mill != NULL)
+    if(mill != NULL){
       printf("%8.8p %8.8p %8.8p %8.8p %8.8p %8.8p\n",mill, mill->cell.header, mill->cell.car, mill->cell.cdr, mill->next, mill->previous);
+      if(mill->next != NULL)
+	mill = mill->next;
+      else break;
+    }
     else printf("NULL\n");
-    if(mill->next != NULL)
-      mill = mill->next;
-    else break;
+    
   }
   while(mill != free_mem);
 }
 
+void printgc(){
+  Pile * mill = gcstack;
+  
+  // Headers
+  printf("\nPrinting Roots: \n");
+  printf("add        content    previous\n");
+
+  do{
+    if(mill != NULL){
+      printf("%8.8p %8.8p %8.8p\n",mill, *(mill->content), mill->previous);
+      if(mill->previous != NULL)
+	mill = mill->previous;
+      else break;
+    }
+    else printf("NULL\n");
+  }
+  while(mill != NULL);
+}
+
 void prettyPrint(){
   printGlobal();
+  printgc();
   memPrint();
+  printf("\n");
 }
 
 // Collection
 
+void move(Wagon * y, Wagon * dest){
+  printf("Move begin\n");
+  if(y->next != NULL){
+    y->next->previous = y->previous;
+    printf("Move 1\n");
+    y->previous->next = y->next;
+  }
+  y->previous = dest;
+  printf("Move 3\n");
+  y->next = dest->next;
+  printf("Move 4\n");
+  y->next->previous = y;
+  printf("Move 5\n");
+  dest->next = y;
+  printf("Move end\n");
+}
+
 void inner_copy(word * x){
+  //printf("Inner_copy begin\n");
   if(x == NULL) return;
   Wagon * y = (Wagon *) x;
-  y->next = tospace;
-  y->previous = tospace->previous;
-  y->previous->next = y;
-  tospace->previous = y;
+  if(y == tospace) tospace = tospace->previous;
+  else move(y, tospace);
+  //printf("Inner_copy end\n");
 }
 
 void forward(Block * x){
+  //printf("Forward begin\n");
   if(IS_POINTER(x->header)) inner_copy((word *)x->header);
   else if (IS_HEADER(x->header)) {
     forward((Block *) &(x->car));
     forward((Block *) &(x->cdr));
   }
+  //printf("Forward End\n");
 }
 
-void scanner();
 void flip(){
   printf("Begin Flip: \n");
   Wagon * temp = free_mem;
-  free_mem = scan;
-  scan = temp;
-  temp = fromspace;
+  //free_mem = fromspace;
   fromspace = tospace;
-  tospace = temp;
+  tospace = free_mem->previous;
+  scan = free_mem->previous;
 
   //copy rootset
   Pile * GC_pro = gcstack;
   while(GC_pro != NULL){
-    forward(&((*(GC_pro->content))->cell));
+    inner_copy((word *) *GC_pro->content);
     GC_pro = GC_pro->previous;
   }
-  printf("Flip Done: \n");
+  //printf("Flip Done: \n");
 }
 
 void scanner(){
   printf("Begin Scan: %p\n", scan);
-  if(scan != tospace){
+  if(scan->previous != tospace){
     printf("Scan in IF: \n");
-    forward(&(scan->cell));
-    printf("Scan Forward: \n");
     scan = scan->previous;
+    forward(&(scan->cell));
   }
   else flip();
-  printf("Scan Done\n");
+  //printf("Scan Done\n");
 }
 
 // Allocation
+
 Wagon * mem_alloc(){
+
   Wagon * newBlock;
+  printf("Contenu de free avant: %p %p\n", *free_mem, free_mem);
+  scanner();
+  printf("Contenu de free apres: %p %p\n", *free_mem, free_mem);
+  if(free_mem->next == fromspace) 
+    move((Wagon *) malloc(sizeof(Wagon)), free_mem);
+
+  newBlock = free_mem;
+  free_mem = free_mem->next;
+  printf("Contenu de free apres-apres: %p %8.8p\n", *free_mem, free_mem);
+  return newBlock;
+
+}
+
+/* Deprecated
+Wagon * mem_alloc(){
+  Wagon * newBlock, *nb;
   // Do a quanta of collection here:
   scanner();
 
@@ -131,22 +189,29 @@ Wagon * mem_alloc(){
     free_mem = free_mem->next;
     return newBlock;
   }
-  // Si il ne reste plus rien de free, on ajoute un block.
+  // Si il ne reste plus rien de free, on ajoute un block. A changer.
   printf("In else\n");
   newBlock = (Wagon *) malloc(sizeof( Wagon ));
-  if(newBlock == NULL) exit(0);
-  newBlock->next = fromspace;
+  nb = (Wagon *) malloc(sizeof( Wagon ));
+  if(newBlock == NULL | nb == NULL) exit(0);
+  
 
-  if(fromspace != NULL){
+  
+    newBlock->next = fromspace;  
+    if(fromspace != NULL){
     newBlock->previous = fromspace->previous;
     if(fromspace->previous != NULL) fromspace->previous->next = newBlock;
     fromspace->previous = newBlock;
-  }
-  else newBlock->previous = NULL;
-  free_mem = newBlock;
+    }
+    else newBlock->previous = NULL;
+  
+  
+  move(newBlock, free_mem);
+  move(nb, newBlock);
+  free_mem = nb;
   return newBlock;
 }
-
+*/
 // Initialise la memoire avec 2 blocs.
 /*
   +-------------+              +-------------+
@@ -177,13 +242,13 @@ void mem_init(){
   free_mem->previous = temp2;
 }
 
-
+// Methodes de librarie concernant l'allocation.
 Wagon * object_allocate(int type, word val1, word val2){
   Wagon * w = mem_alloc();
   switch(type){
   case 0:
     // Une paire
-    w->cell.header =  HEADERISE(BOX(0));
+    w->cell.header =  HEADERISE(0);
     w->cell.car = val1;
     w->cell.cdr = val2;
     break;
@@ -203,15 +268,128 @@ Wagon * object_allocate(int type, word val1, word val2){
   return w;
 }
 
-// Main
+word box_fixnum(word w){return BOX(w);}
+word unbox_fixnum(word w){return UNBOX(w);}
 
+Block* cons(word car, word cdr){
+  Wagon *w = object_allocate(0, car, cdr);
+  return &(w->cell);
+}
+
+Block * cons_null(){
+  return cons(0,0);
+}
+
+word null(){ return 0x0;}
+
+int is_null(word * p) {return (p == NULL)?1:0;}
+int is_pair(word * p) {return IS_HEADER(p);}
+int is_number(word * p) {return IS_FIXNUM(p);}
+
+void setcar_ptr(Block *b, word val){b->car = val;}
+void setcdr_ptr(Block *b, word val){b->cdr = val;}
+void setcar(Block *b, word val){b->car = BOX(val);}
+void setcdr(Block *b, word val){b->cdr = BOX(val);}
+
+word getcar_ptr(Block *b) {return b->car;}
+word getcdr_ptr(Block *b) {return b->cdr;}
+word getcar(Block *b) {return UNBOX(b->car);}
+word getcdr(Block *b) {return UNBOX(b->cdr);}
+
+// Tests
+//Arbre arith
+char * expr_str = "+1*39";
+Wagon * Gen_Tree(){
+  printf("\nBegin Gen_Tree\n");
+  prettyPrint();
+  Wagon * tree = object_allocate(0, 0, 0);
+  GCPRO(tree, tree2);
+  
+  if(*expr_str >= 48 && *expr_str <=57){
+    printf("In if: expr: %c, tree2.current: %u\n", *expr_str, &(tree->cell));
+    tree->cell.header = HEADERISE((word)(*expr_str++));
+    tree->cell.car = BOX(0);
+    tree->cell.cdr = BOX(0);
+  }
+  else{
+    //printf("In else: expr: %c\n", *expr_str);
+    tree->cell.header = BOX(*expr_str++);
+    // Initialise a 1 pour éviter des problèmes de scan.
+    tree->cell.car = BOX(0);
+    tree->cell.cdr = BOX(0); 
+    tree->cell.car = (word)Gen_Tree();
+    tree->cell.cdr = (word)Gen_Tree();
+  }
+  UNGCPRO(tree2);
+  printf("End Gen_Tree \n\n");
+  return tree;
+}
+
+
+// Eval tree
+word evalTree(Wagon * tree){
+  // Parcour l'arbre pour reconstituer l'expression
+  if((word)tree == 1) return 0;
+  word cur = UNBOX(tree->cell.header), car = tree->cell.car, cdr = tree->cell.cdr;
+
+  // Si valeur, return valeur.
+  printf("Tree[0]: %d, %p \n", cur, &(tree->cell));
+  if(cur>=48 && cur<=57) return (cur-48);
+  // Si op: evalTree des enfants puis switch l'op sur les valeurs.
+  else{
+    printf("Dans le else: car: %p, cdr: %p\n", tree->cell.car, tree->cell.cdr);
+    word l = evalTree((Wagon *)((word *)tree->cell.car)), r = evalTree((Wagon *)((word *)tree->cell.cdr));
+    printf("l: %d, r: %d\n", l, r);
+    switch(cur){
+    case '*': return l*r;
+    case '+': return l+r;
+    default: return 0;
+    }
+  }
+}
+
+// Main
 int main(){
   mem_init();
   printf("Mem Init Done\n\n");
   prettyPrint();
-  Wagon * w1 = object_allocate(1, 32, 0);
-  Wagon * w2 = object_allocate(1, (word) w1, 0);
+  Wagon * w1 = object_allocate(2, 32, 0);
+  GCPRO(w1, t);
   prettyPrint();
+  Wagon * w2 = object_allocate(1, (word) w1, 0);
+  GCPRO(w2, t2);
+  //UNGCPRO(t);
+  prettyPrint();
+  Wagon * w3 = object_allocate(2, 7, 0);
+  prettyPrint();
+  Wagon * w4 = object_allocate(2, 8, 0);
+  prettyPrint();
+  Wagon * w5 = object_allocate(2, 9, 0);
+  prettyPrint();
+  Wagon * w6 = object_allocate(2, 10, 0);
+  prettyPrint();
+  UNGCPRO(t);
   printf("It runs!\n");
+
+  printf("\nStarting Gen_Tree\n");
+  Wagon * tree = Gen_Tree();
+  GCPRO(tree, t3);
+  prettyPrint();
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  w6 = object_allocate(2, 10, 0);
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  w6 = object_allocate(2, 10, 0);
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  w6 = object_allocate(2, 10, 0);
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  w6 = object_allocate(2, 10, 0);
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  prettyPrint();
+  w6 = object_allocate(2, 10, 0);
+  prettyPrint();
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+  w6 = object_allocate(2, 10, 0);
+  printf("La valeur de l'arbre est: %d\n", evalTree(tree));
+
   return 0;
 }

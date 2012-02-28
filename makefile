@@ -8,7 +8,7 @@ MINISCM_SOURCE = scanner.scm parser.scm miniscm.scm
 all: miniscm.exe check
 
 check:
-	for t in test1 test2 test3 test4; do \
+	for t in test1 test2 test3 test4 test5 test6; do \
 	  $(MAKE) tests/$$t.test; \
 	done
 
