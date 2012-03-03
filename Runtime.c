@@ -1,5 +1,8 @@
 #include "Garbage_Collector.c"
 
+#define STRING_TAG 0x10
+#define IS_STRING(p) (p & STRING_TAG != 0)
+
 word box_fixnum(word w){return BOX(w);}
 word unbox_fixnum(word w){return UNBOX(w);}
 
@@ -17,6 +20,7 @@ word null(){ return 0x0;}
 int is_null(word * p) {return (p == NULL)?1:0;}
 int is_pair(word * p) {return IS_HEADER((word)p);}
 int is_number(word * p) {return IS_FIXNUM((word) p);}
+int is_string(Block * p) {return IS_STRING((word)(p->header));}
 
 void setcar_ptr(Block *b, word val){b->car = val;}
 void setcdr_ptr(Block *b, word val){b->cdr = val;}
@@ -27,3 +31,9 @@ word getcar_ptr(Block *b) {return b->car;}
 word getcdr_ptr(Block *b) {return b->cdr;}
 word getcar(Block *b) {return UNBOX(b->car);}
 word getcdr(Block *b) {return UNBOX(b->cdr);}
+
+Block * string_cons(char * s){
+  Block * n = cons(BOX(*(s++)), (word)string_cons(s));
+  n->header |= STRING_TAG;
+  return n;
+}

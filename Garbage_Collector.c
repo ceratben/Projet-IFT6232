@@ -5,12 +5,16 @@
 
 // Definitions
 typedef ssize_t word;
+word tag_ref = 0x1;
 #define BLOCK_SIZE (3)
 
 #define BOX(p) ((p)<<2 | 0x01)
 #define UNBOX(p) ((p)>>2)
 #define HEADERISE(p) ((p)<<2 | 0x03)
 
+#define TAG(p) (p |= tag_ref)
+#define IS_TAGGED(p) ((p & tag_ref) != 0)
+#define FLIP_TAG() tag_ref = tag_ref ^ 0x3
 
 #define IS_POINTER(p) ((p & 0x01) == 0)
 #define IS_FIXNUM(p) ((p & 0x03) == 1)
@@ -24,6 +28,7 @@ typedef struct block {
 
 typedef struct wagon {
   Block cell;
+  int tags;
   struct wagon * next;
   struct wagon * previous;
 } Wagon;
@@ -109,11 +114,13 @@ void move(Wagon * y, Wagon * dest){
 void inner_copy(word * x){
   if(x == NULL) return;
   Wagon * y = (Wagon *) x;
+  if(IS_TAGGED(y->tags)) return;
   if(y == tospace) tospace = tospace->previous;
   else {
     if(y == fromspace) fromspace = fromspace->next;
     move(y, tospace);
   }
+  TAG(y->tags);
 }
 
 void forward(Block * x){
@@ -130,6 +137,7 @@ void flip(){
   fromspace = tospace;
   tospace = free_mem->previous;
   scan = free_mem->previous;
+  FLIP_TAG();
 
   //copy rootset
   Pile * GC_pro = gcstack;
@@ -270,9 +278,9 @@ word evalTree(Wagon * tree){
     }
   }
 }
-*/
+
 // Main
-/*
+
 int main(){
   mem_init();
   printf("Mem Init Done\n\n");
@@ -318,4 +326,5 @@ int main(){
   
   return 0;
 }
+
 */

@@ -10,6 +10,7 @@ text   [^"]*
 %%
 
 [ \n]+           (yycontinue)
+";;;"{text}*     (yycontinue)
 "#"[tf]          (cons 'BOOL (string->symbol yytext))
 {sign}?{digit}+  (cons 'INTEGER (string->number yytext))
 \"{text}\"       (cons 'STRING yytext)

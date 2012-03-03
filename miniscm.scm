@@ -1,69 +1,75 @@
 #! /usr/bin/env gsi
 
+(include "defmacro.scm")
+
+;; Plan pour la suite:
+;; Refaire les phases d'expansions macro -> alpha-conv etc -> passe globale *-> comp-expr -> gen-code
+
+
 ;;; File: "miniscm.scm"
 
 
-;;; Match
+;;; Match Utiliser le code de la demo.
 
-(define-macro (match sujet . clauses)
-  (define (if-equal? var gab oui non)
-    (cond ((and (pair? gab)
-		(eq? (car gab) 'unquote)
-		(pair? (cdr gab))
-		(null? (cddr gab)))
-	   `(let ((,(cadr gab) ,var))
-	      ,oui))
-	  ((null? gab)
-	   `(if (null? ,var) ,oui ,non))
-	  ((symbol? gab)
-	   `(if (eq? ,var ',gab) ,oui ,non))
-	  ((or (boolean? gab)
-	       (char? gab))
-	   `(if (eq? ,var ,gab) ,oui ,non))
-	  ((number? gab)
-	   `(if (eqv? ,var ,gab) ,oui ,non))
-	  ((pair? gab)
-	   (let ((carvar (gensym))
-		 (cdrvar (gensym)))
-	     `(if (pair? ,var)
-		  (let ((,carvar (car ,var)))
-		    ,(if-equal? carvar (car gab)
-				`(let ((,cdrvar (cdr ,var)))
-				   ,(if-equal? cdrvar (cdr gab) oui non))
-				non))
-		  ,non)))
-	  (else
-	   (error "unknown pattern"))))
+;; (define-macro (match sujet . clauses)
+;;   (define (if-equal? var gab oui non)
+;;     (cond ((and (pair? gab)
+;; 		(eq? (car gab) 'unquote)
+;; 		(pair? (cdr gab))
+;; 		(null? (cddr gab)))
+;; 	   `(let ((,(cadr gab) ,var))
+;; 	      ,oui))
+;; 	  ((null? gab)
+;; 	   `(if (null? ,var) ,oui ,non))
+;; 	  ((symbol? gab)
+;; 	   `(if (eq? ,var ',gab) ,oui ,non))
+;; 	  ((or (boolean? gab)
+;; 	       (char? gab))
+;; 	   `(if (eq? ,var ,gab) ,oui ,non))
+;; 	  ((number? gab)
+;; 	   `(if (eqv? ,var ,gab) ,oui ,non))
+;; 	  ((pair? gab)
+;; 	   (let ((carvar (gensym))
+;; 		 (cdrvar (gensym)))
+;; 	     `(if (pair? ,var)
+;; 		  (let ((,carvar (car ,var)))
+;; 		    ,(if-equal? carvar (car gab)
+;; 				`(let ((,cdrvar (cdr ,var)))
+;; 				   ,(if-equal? cdrvar (cdr gab) oui non))
+;; 				non))
+;; 		  ,non)))
+;; 	  (else
+;; 	   (error "unknown pattern"))))
   
-  (let* ((var (gensym))
-	 (fns (map (lambda (x) (gensym)) clauses))
-	 (err (gensym)))
-    `(let ((,var ,sujet))
-       ,@(map (lambda (fn1 fn2 clause)
-		`(define (,fn1)
-		   ,(if-equal? var
-			       (car clause)
-			       (if (and (eq? (cadr clause) 'when)
-					(pair? (cddr clause)))
-				   `(if ,(caddr clause) ,(cadddr clause) (,fn2))
-                                     (cadr clause))
-                                 `(,fn2))))
-                fns
-                (append (cdr fns) (list err))
-                clauses)
-         (define (,err) (error "match failed"))
-         (,(car fns)))))
+;;   (let* ((var (gensym))
+;; 	 (fns (map (lambda (x) (gensym)) clauses))
+;; 	 (err (gensym)))
+;;     `(let ((,var ,sujet))
+;;        ,@(map (lambda (fn1 fn2 clause)
+;; 		`(define (,fn1)
+;; 		   ,(if-equal? var
+;; 			       (car clause)
+;; 			       (if (and (eq? (cadr clause) 'when)
+;; 					(pair? (cddr clause)))
+;; 				   `(if ,(caddr clause) ,(cadddr clause) (,fn2))
+;;                                      (cadr clause))
+;;                                  `(,fn2))))
+;;                 fns
+;;                 (append (cdr fns) (list err))
+;;                 clauses)
+;;          (define (,err) (error "match failed"))
+;;          (,(car fns)))))
 
-(define gensym ;; une version de gensym utile pour le deboguage
-  (let ((count 0))
-      (lambda ()
-        (set! count (+ count 1))
-        (string->symbol (string-append "g" (number->string count))))))
+;; (define gensym ;; une version de gensym utile pour le deboguage
+;;   (let ((count 0))
+;;       (lambda ()
+;;         (set! count (+ count 1))
+;;         (string->symbol (string-append "g" (number->string count))))))
 
-;;;;;
+;; ;;;;;
 
-(define gcte '(argc))
-(define grte '(1))
+;; (define gcte '(argc))
+;; (define grte '(1))
 (define macro-list '())
 
 (define env-lookup 
@@ -98,58 +104,58 @@
 
 
 
-;;; Executing define:
+;;; Executing define: A enlever.
 
-(define defining 
-  (lambda (expr)
-    (cond
-	   ((and (list? expr) (eq? (car expr) 'begin)) (map defining (cdr expr)))
-	   ((and (list? expr)
-              (= (length expr) 3)
-              (eq? (list-ref expr 0) 'define))
-	    (begin 
-	      (set! gcte (append (cons (list-ref expr 1) '()) gcte)) 
-	      (set! grte (append (cons (comp-expr (list-ref expr 2) 0 gcte grte) '())grte))
-	      (print grte)))
-	   ((and (list? expr)
-              (= (length expr) 3)
-              (eq? (list-ref expr 0) 'define-macro)) 
-	    (let ((sig (list-ref expr 1)) (body (list-ref expr 2)))
-	      (set! macro-list (cons (cons sig body) macro-list))))
-	   )))
+;; (define defining 
+;;   (lambda (expr)
+;;     (cond
+;; 	   ((and (list? expr) (eq? (car expr) 'begin)) (map defining (cdr expr)))
+;; 	   ((and (list? expr)
+;;               (= (length expr) 3)
+;;               (eq? (list-ref expr 0) 'define))
+;; 	    (begin 
+;; 	      (set! gcte (append (cons (list-ref expr 1) '()) gcte)) 
+;; 	      (set! grte (append (cons (comp-expr (list-ref expr 2) 0 gcte grte) '())grte))
+;; 	      (print grte)))
+;; 	   ;; ((and (list? expr)
+;;            ;;    (= (length expr) 3)
+;;            ;;    (eq? (list-ref expr 0) 'define-macro)) 
+;; 	   ;;  (let ((sig (list-ref expr 1)) (body (list-ref expr 2)))
+;; 	   ;;    (set! macro-list (cons (cons sig body) macro-list))))
+;; 	   )))
 
-(define macro-lookup
-  (lambda (x l)
-      (and (pair? l) 
-	   (if (eq? x (caaar l))
-	       (car macro-list)
-	       (macro-lookup x (cdr l)))
-	   )))
+;; (define macro-lookup
+;;   (lambda (x l)
+;;       (and (pair? l) 
+;; 	   (if (eq? x (caaar l))
+;; 	       (car macro-list)
+;; 	       (macro-lookup x (cdr l)))
+;; 	   )))
 
-(define expand-macro
-  (lambda (expr macr)
-      (let* ((fpara (map list (cdr expr) (cdar macr))) (body (cdr macr)) 
-	    (f (lambda (a) 
-		 (let ((x (assoc a fpara)))
-		   (if x (cdr x) a)))))
-	(if (list? body)
-	      (map f body)
-	      (f body))
-	  )))
+;; (define expand-macro
+;;   (lambda (expr macr)
+;;       (let* ((fpara (map list (cdr expr) (cdar macr))) (body (cdr macr)) 
+;; 	    (f (lambda (a) 
+;; 		 (let ((x (assoc a fpara)))
+;; 		   (if x (cdr x) a)))))
+;; 	(if (list? body)
+;; 	      (map f body)
+;; 	      (f body))
+;; 	  )))
 
-(define apply-macro 
-  (lambda (ast)
-      (if (pair? ast) 
-	   (let ((x (macro-lookup (car ast) macro-list)) (params (map apply-macro (cdr ast))))
-	     (if x
-		 (let ((newTok (eval (expand-macro (cons (car ast) params) x))))
-		   (begin 
-		     (defining newTok)
-		     (apply-macro newTok)
-		     ))
-		 (cons (car ast) params))
-	     )
-	   ast)))
+;; (define apply-macro 
+;;   (lambda (ast)
+;;       (if (pair? ast) 
+;; 	   (let ((x (macro-lookup (car ast) macro-list)) (params (map apply-macro (cdr ast))))
+;; 	     (if x
+;; 		 (let ((newTok (eval (expand-macro (cons (car ast) params) x))))
+;; 		   (begin 
+;; 		     (defining newTok)
+;; 		     (apply-macro newTok)
+;; 		     ))
+;; 		 (cons (car ast) params))
+;; 	     )
+;; 	   ast)))
 
 ;;; Translation of AST to machine code
 
@@ -166,6 +172,9 @@
   (cond ((number? expr)
          (gen-literal expr))
 
+	((boolean? expr)
+	 ;;(if expr (gen-literal 1) (gen-literal 0)))
+	 "")
 	;;;a faire
 	;;;((string? expr)
 	 ;;;(begin (pp expr) ""))
@@ -189,7 +198,20 @@
 
 	;;; begin
 	((and (list? expr) (eq? (car expr) 'begin))
-	    (flatten (map (lambda (x) (comp-expr x fs cte rte)) (cdr expr))))
+	 (let loop ((x (cdr expr)))
+	   (if (null? (cdr x))
+	       (comp-expr (car x) fs cte rte)
+	       (if (and (list? (car x) )
+			(= (length (car x)) 3)
+			(eq? (list-ref (car x) 0) 'define))
+		   (let ((v (comp-expr (list-ref (car x) 2) fs cte rte)))
+		     (begin
+		       (set! cte (cte-extend cte (list (cadr (car x)))))
+		       (set! rte (rte-extend rte (list v)))
+		       (loop (cdr x))
+		       ))
+		   (list (comp-expr (car x) fs cte rte) (loop (cdr x) ))
+		   ))))
 
 	;;; let to change
         ((and (list? expr)
@@ -211,9 +233,11 @@
 	((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'define))
-         
-	 ""
-	)
+	 "")
+	 ;;(begin
+	 ;;  (set! gcte (cte-extend gcte (list (cadr expr))))
+	 ;;  (set! grte (rte-extend grte (list (comp-expr (caddr expr) fs cte rte))))))
+
 	((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'define-macro))
@@ -226,7 +250,7 @@
 	((and (list? expr) (= (length expr) 3) (eq? (car expr) 'set!))
 	 (let ((i (env-lookup (list-ref expr 1) cte 0)))
 	   (if i 
-	       (list-set! rte i (comp-expr (list-ref expr 2) fs cte rte)) 
+	       (list-set! rte i (comp-e xpr (list-ref expr 2) fs cte rte)) 
 	       (error "Unbound variable" (list-ref expr 1)))
 	  ))
 
@@ -245,7 +269,7 @@
  		     (set! rte (append (cons (+ fs n) '()) rte))
 		     (loop (+ n 1)))
 		   ))
-	     (comp-expr (list-ref expr 2) fs cte rte))))
+	     (comp-expr (list-ref expr 2) (+ fs (length arg)) cte rte))))
 
         ((and (list? expr)
               (= (length expr) 3)
@@ -261,7 +285,7 @@
 
 	;;; call
 	((list? expr)
-	 (let ((data (map (lambda (x) (comp-expr x fs cte))))) 
+	 (let ((data (map (lambda (x) (comp-expr x fs cte rte)) expr))) 
 	 (gen-call  (car data) (cdr data))))
 
         (else
@@ -315,9 +339,9 @@
 (define (main source-filename)
   (let ((ast (parse source-filename)))
     (let ((code (begin 
-		  (defining ast)
+		  ;;(defining ast)
 		  (translate 
-		   (apply-macro ast)))))
+		   (expand-program ast)))))
       (with-output-to-file
           (string-append (path-strip-extension source-filename) ".s")
         (lambda ()
