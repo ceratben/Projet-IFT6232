@@ -37,3 +37,14 @@ Block * string_cons(char * s){
   n->header |= STRING_TAG;
   return n;
 }
+
+Block * make_closure(word * fun, word * env) {
+
+  Block * newEnv, * c;
+
+  // On fait une copie de env.
+
+  // On cons la fun et la copie de env
+
+  return NULL;
+}

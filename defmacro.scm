@@ -142,8 +142,19 @@
 
   (match expr
 
-    ((define . ,rest)
-     (error "internal define is not supported"))
+	 ;;    ((define . ,rest)
+	 ;;     (error "internal define is not supported"))
+	 ((define (,id . ,params) . ,Es) when (symbol? id)
+          (expand-core
+	   `(define ,id (lambda ,params ,@Es))
+	   menv))
+
+         ((define ,id ,E1) when (symbol? id)
+          `(define ,id ,(expand E1 menv)))
+
+         ((define . ,rest)
+          (error "improper define"))
+	 
 
     ((define-macro . ,rest)
      (error "internal define-macro is not supported"))
