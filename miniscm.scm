@@ -50,8 +50,10 @@
 
 ;;; Translation of AST to machine code
 
+(define def-code '())
+
 (define (translate ast)
-  (comp-function "_main" ast))
+  (cons (comp-function "_main" ast) def-code))
 
 (define (comp-function name expr)
   (gen-function name
@@ -70,6 +72,9 @@
 	;;;((string? expr)
 	 ;;;(begin (pp expr) ""))
 
+	((eq? expr 'list) "")
+
+
 	;;; Var
         ((symbol? expr)
          (let ((x (env-lookup expr cte 0)))
@@ -77,7 +82,9 @@
                (let ((index (list-ref rte x)))
 		 (if (number? index)
 		     (gen-parameter (+ fs index))
-		     index)
+		     ;;(if (and (pair? index) (string? (car index))) 
+		     (gen-call-global index) )
+		     ;;index))
 		 )
 	       ;;; retourne un litéral?
                (error "undefined variable" expr))))	
@@ -93,14 +100,25 @@
 	   (if (null? (cdr x))
 	       (comp-expr (car x) fs cte rte)
 	       (cond 
+
 		((and (list? (car x) )
 		      (= (length (car x)) 3)
 		      (eq? (list-ref (car x) 0) 'define))
 		 (begin
 		   (set! cte (cte-extend cte (list (cadr (car x)))))
-		   (set! rte (rte-extend rte (list (comp-expr (list-ref (car x) 2) fs cte rte))))
-		   (loop (cdr x))
-		   ))
+		   (let ((name (string-append "_" (list->string 
+						   (map (lambda (x) 
+							  (if (equal? x #\-) #\_ x)) 
+							(string->list(symbol->string(cadr (car x)))))))))
+		   (begin 
+		     (set! rte (rte-extend rte (list name)))
+		     (set! def-code 
+			   (cons (gen-global 
+				  name
+				  (comp-expr (list-ref (car x) 2) fs cte rte)) 
+				 def-code))
+		   (loop (cdr x)))
+		   )))
 
 		((and (list? (car x) )
 		      (= (length (car x)) 3)
@@ -108,6 +126,7 @@
 		 (begin
 		   (gen-set (list-ref (car x) 1) (comp-expr (list-ref (car x) 2) fs cte rte))
 		   (loop (cdr x))))
+		
 		(else (list (comp-expr (car x) fs cte rte) (loop (cdr x) )))
 		))))
 
@@ -152,15 +171,17 @@
 	 ;;; do something
 	 (let ((arg (list-ref expr 1)))
 	   (begin
-	   ;;; push les args dans cte
+	   ;;; push les args dans env
 	     (let loop ((n 1))
 	       (and (<= n (length arg))
 		   (begin
 		     (set! cte (append (cons (list-ref arg (- n 1)) '()) cte))
- 		     (set! rte (append (cons  (- n) '()) rte))
+ 		     (set! rte (append (cons  (- (+ fs n)) '()) rte))
 		     (loop (+ n 1)))
 		   ))
-	     (comp-expr (list-ref expr 2) fs cte rte))))
+	     (gen-lambda rte (comp-expr (caddr expr) fs cte rte))
+	     ;;(comp-expr (list-ref expr 2) fs cte rte)
+	     )))
 
 	((and (list? expr)
               (= (length expr) 2)
@@ -184,7 +205,7 @@
           (comp-expr (list-ref expr 2) fs cte rte)
           (comp-expr (list-ref expr 1) (+ fs 1) cte rte)))
 
-	;;; call
+	;;; call updater le fs graduellement.
 	((list? expr)
 	 (let ((data (map (lambda (x) (comp-expr x (+ fs (length (cdr expr))) cte rte)) expr))) 
 	 (gen-call  (car data) (cdr data))))
@@ -202,6 +223,12 @@
        name ":\n"
        code
        "    ret\n"))
+
+(define (gen-global name code)
+  (gen "\n" name ":\n" code "    ret\n" ))
+
+(define (gen-call-global name)
+  (gen "    CALL    " name "\n"))
 
 (define (gen-if c t f) "")
 (define (gen-set v x) "")
