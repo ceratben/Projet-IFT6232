@@ -72,8 +72,14 @@
 	;;;((string? expr)
 	 ;;;(begin (pp expr) ""))
 
-	((eq? expr 'list) "")
+	;;((eq? expr 'list) "")
 
+	((null? expr) (gen-null))
+
+
+	;; TODO Gerer les symboles et litt.
+	((and (list? expr) (= (length expr) 2) (eq? (car expr) 'quote)) 
+	 "")
 
 	;;; Var
         ((symbol? expr)
@@ -186,12 +192,18 @@
 	((and (list? expr)
               (= (length expr) 2)
               (eq? (list-ref expr 0) 'car))
-	 (gen-car (comp-expr (cdr expr) fs cte rte)))
+	 (gen-car (comp-expr (cadr expr) fs cte rte)))
 
 	((and (list? expr)
               (= (length expr) 2)
               (eq? (list-ref expr 0) 'cdr))
-	 (gen-cdr (comp-expr (cdr expr) fs cte rte)))
+	 (gen-cdr (comp-expr (cadr expr) fs cte rte)))
+	
+	((and (list? expr)
+              (= (length expr) 3)
+              (eq? (list-ref expr 0) 'cons))
+	 (gen-cons (comp-expr (cadr expr) fs cte rte) (comp-expr (caddr expr) fs cte rte)))
+
 
         ((and (list? expr)
               (= (length expr) 3)
@@ -204,6 +216,9 @@
             ((/) "idiv"))
           (comp-expr (list-ref expr 2) fs cte rte)
           (comp-expr (list-ref expr 1) (+ fs 1) cte rte)))
+
+	
+
 
 	;;; call updater le fs graduellement.
 	((list? expr)
@@ -267,6 +282,8 @@
 
 (define (gen-car x) "") ;; TODO
 (define (gen-cdr x) "") ;; TODO
+(define (gen-cons a d) "")
+(define gen-null "")
 
 (define (gen-let val body)
   (gen val

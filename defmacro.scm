@@ -260,6 +260,16 @@
 (define top-menv
   (list
 
+   (cons 'list
+	 (lambda rest
+	   (match (cons 'list rest)
+		  ((list) '())
+		  ((list ,E) `(cons ,E '()))
+		  ((list ,E . ,Es) `(cons ,E (list ,Es)))
+		  (,_ (error "improper list"))
+		  )))
+
+
    (cons 'let
          (lambda rest
            (match (cons 'let rest)

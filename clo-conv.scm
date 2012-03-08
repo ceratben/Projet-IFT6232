@@ -102,7 +102,7 @@
 (define (clo-conversion ast)
    (append 
     '(begin
-       (define make-closure list)
+       ;;(define make-closure list)
        (define closure-code (lambda (clo) (car clo)))
        (define closure-ref (lambda (clo i) (if (= i 0) (car clo) (closure-ref (cdr clo) (- i 1)))))
        )
@@ -147,7 +147,7 @@
 
     ((lambda ,params ,E)
      (let ((new-cenv (difference (fv expr) globals)))
-       `(make-closure
+       `(list
          (lambda ($this ,@params)
            ,(closurec E new-cenv globals))
          ,@(map cc new-cenv))))
