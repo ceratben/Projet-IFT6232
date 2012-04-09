@@ -66,20 +66,19 @@
          (gen-literal expr))
 
 	((boolean? expr)
+	 ;; Problème avec les begins qui retournent tous #f.
 	 ;;(if expr (gen-literal 1) (gen-literal 0)))
 	 "")
+
 	;;;a faire
 	;;;((string? expr)
 	 ;;;(begin (pp expr) ""))
 
-	;;((eq? expr 'list) "")
-
-	((null? expr) (gen-null))
-
-
+	((null? expr) gen-null)
+ 
 	;; TODO Gerer les symboles et litt.
 	((and (list? expr) (= (length expr) 2) (eq? (car expr) 'quote)) 
-	 "")
+	 gen-null)
 
 	;;; Var
         ((symbol? expr)
@@ -112,6 +111,7 @@
 		      (eq? (list-ref (car x) 0) 'define))
 		 (begin
 		   (set! cte (cte-extend cte (list (cadr (car x)))))
+		   ;;; On remplace les - par des _ pour l'étiquette.
 		   (let ((name (string-append "_" (list->string 
 						   (map (lambda (x) 
 							  (if (equal? x #\-) #\_ x)) 
@@ -166,16 +166,13 @@
               (eq? (list-ref expr 0) 'define-macro))
          
 	 ""
-	)
-
-	
+	)	
 
 	;;; lambda
         ((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'lambda))
-	 ;;; do something
-	 (let ((arg (list-ref expr 1)))
+	 (let ((arg (list-ref expr 1)) (l-name (gensym)))
 	   (begin
 	   ;;; push les args dans env
 	     (let loop ((n 1))
@@ -185,8 +182,15 @@
  		     (set! rte (append (cons  (- (+ fs n)) '()) rte))
 		     (loop (+ n 1)))
 		   ))
-	     (gen-lambda rte (comp-expr (caddr expr) fs cte rte))
-	     ;;(comp-expr (list-ref expr 2) fs cte rte)
+	     ;; Creer les blocs assembleurs associés.
+	     (let ((code (comp-expr (caddr expr) fs cte rte)))
+	       (begin 
+		 (set! def-code 
+			   (cons (gen-global 
+				  l-name
+				  code )
+				 def-code))
+		 (gen-lambda l-name)))
 	     )))
 
 	((and (list? expr)
@@ -243,11 +247,19 @@
   (gen "\n" name ":\n" code "    ret\n" ))
 
 (define (gen-call-global name)
-  (gen "    CALL    " name "\n"))
+  (gen "    call    " name "\n"))
 
-(define (gen-if c t f) "")
+(define (gen-if c t f) (gen
+		c 
+		"    jz else" 
+		t 
+		"    jmp end_if" 
+		"    else:" 
+		f 
+		"enf_if:"
+	))
 (define (gen-set v x) "")
-(define (gen-lambda args body) "")           ;;; to implement
+(define (gen-lambda name) (gen "    call " name "\n"))           ;;; to implement
 (define (gen-call fun args)
 ;;	(begin
 ;;		(display "longueur args = ")
@@ -282,8 +294,8 @@
 
 (define (gen-car x) "") ;; TODO
 (define (gen-cdr x) "") ;; TODO
-(define (gen-cons a d) "")
-(define gen-null "")
+(define (gen-cons a d) "");; (gen-call "    call    _cons\n" (list a d)))
+(define gen-null "    call    _null\n")
 
 (define (gen-let val body)
   (gen val

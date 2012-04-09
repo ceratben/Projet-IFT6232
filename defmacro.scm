@@ -260,7 +260,7 @@
 (define top-menv
   (list
 
-   (cons 'list
+   (cons 'list-macro
 	 (lambda rest
 	   (match (cons 'list rest)
 		  ((list) '())

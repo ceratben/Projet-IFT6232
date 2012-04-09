@@ -1175,12 +1175,12 @@
     #t
     (lambda (yycontinue yygetc yyungetc)
       (lambda (yytext yyline)
-                 (cons 'SYM (string->symbol yytext))
+                 (cons 'LIST_SYM (string->symbol yytext))
         ))
     #t
     (lambda (yycontinue yygetc yyungetc)
       (lambda (yytext yyline)
-                 (cons 'LIST_SYM (string->symbol yytext))
+                 (cons 'SYM (string->symbol yytext))
         ))
     #t
     (lambda (yycontinue yygetc yyungetc)
@@ -1205,17 +1205,17 @@
     9))) (95 (64 (63 3 err) (91 3 err)) (97 (96 3 err) (123 3 err))))) err
     err (47 (38 (34 (33 err 3) (36 err 3)) (44 (42 err 3) (= 45 3 err)))
     (91 (60 (58 3 err) (= 63 err 3)) (96 (95 err 3) (97 err (123 3 err)))))
-    (46 (40 (34 (33 err 12) (36 err (38 12 err))) (43 (41 11 (42 err 12))
-    (= 44 err 13))) (64 (48 (47 err 12) (60 err (63 12 err))) (96 (91 12
-    (95 err 12)) (97 err (123 12 err))))) (= 34 14 5) (48 err (58 6 err))
-    (48 err (58 6 err)) (103 (102 err 15) (= 116 15 err)) (= 59 16 err) (11
-    (10 err 10) (= 32 10 err)) (35 (34 11 err) (= 41 17 11)) (47 (38 (34
-    (33 err 12) (36 err 12)) (44 (42 err 12) (= 45 12 err))) (91 (60 (58 12
-    err) (= 63 err 12)) (96 (95 err 12) (97 err (123 12 err))))) err err
-    err (= 59 18 err) (35 (34 11 err) (= 41 17 11)) (= 34 err 18))
+    (46 (40 (34 (33 err 11) (36 err (38 11 err))) (43 (41 13 (42 err 11))
+    (= 44 err 12))) (64 (48 (47 err 11) (60 err (63 11 err))) (96 (91 11
+    (95 err 11)) (97 err (123 11 err))))) (= 34 14 5) (48 err (58 6 err))
+    (48 err (58 6 err)) (103 (102 err 15) (= 116 15 err)) (= 34 err 9) (11
+    (10 err 10) (= 32 10 err)) (47 (38 (34 (33 err 11) (36 err 11)) (44 (42
+    err 11) (= 45 11 err))) (91 (60 (58 11 err) (= 63 err 11)) (96 (95 err
+    11) (97 err (123 11 err))))) err (35 (34 13 err) (= 41 16 13)) err err
+    (35 (34 13 err) (= 41 16 13)))
    '#((#f . #f) (9 . 9) (8 . 8) (7 . 7) (#f . #f) (#f . #f) (3 . 3) (7 . 7)
-    (#f . #f) (#f . #f) (0 . 0) (#f . #f) (5 . 5) (5 . 5) (4 . 4) (2 . 2)
-    (#f . #f) (6 . 6) (1 . 1))))
+    (#f . #f) (1 . 1) (0 . 0) (6 . 6) (6 . 6) (#f . #f) (4 . 4) (2 . 2) (5
+    . 5))))
 
 ;
 ; User functions
