@@ -262,10 +262,10 @@
 
    (cons 'list-macro
 	 (lambda rest
-	   (match (cons 'list rest)
-		  ((list) '())
-		  ((list ,E) `(cons ,E '()))
-		  ((list ,E . ,Es) `(cons ,E (list ,Es)))
+	   (match (cons 'list-macro rest)
+		  ((list-macro) '())
+		  ((list-macro ,E) `(cons ,E '()))
+		  ((list-macro ,E . ,Es) `(cons ,E (list-macro ,Es)))
 		  (,_ (error "improper list"))
 		  )))
 

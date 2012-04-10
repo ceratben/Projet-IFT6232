@@ -57,7 +57,7 @@
 
 (define (comp-function name expr)
   (gen-function name
-                (comp-expr expr 0 gcte grte)))
+                (comp-expr expr 0 '() '())))
 
 (define (comp-expr expr fs cte rte) ;; fs = frame size
                                     ;; cte = compile time environment
@@ -208,7 +208,17 @@
               (eq? (list-ref expr 0) 'cons))
 	 (gen-cons (comp-expr (cadr expr) fs cte rte) (comp-expr (caddr expr) fs cte rte)))
 
+	;; Equal, eq and =
+	((and (list? expr)
+              (= (length expr) 3)
+              (or (eq? (list-ref expr 0) 'eq?) (eq? (list-ref expr 0) '=)))
+	 (gen-eq
+	  (comp-expr (list-ref expr 1) fs cte rte)
+	  (comp-expr (list-ref expr 2) fs cte rte)
+	  (if (eq? (list-ref expr 0) 'eq?) "_is_eq" "_is_int_eq")
+	  ))
 
+	 ;; Bin op.
         ((and (list? expr)
               (= (length expr) 3)
               (member (list-ref expr 0) '(+ - * /)))
@@ -251,51 +261,46 @@
 
 (define (gen-if c t f) (gen
 		c 
-		"    jz else" 
+		"    jz else\n" 
 		t 
-		"    jmp end_if" 
-		"    else:" 
+		"    jmp end_if\n" 
+		"else:\n" 
 		f 
-		"enf_if:"
+		"end_if:\n"
 	))
 (define (gen-set v x) "")
-(define (gen-lambda name) (gen "    call " name "\n"))           ;;; to implement
+(define (gen-lambda name) (gen "    call " name "\n"))           
 (define (gen-call fun args)
-;;	(begin
-;;		(display "longueur args = ")
-;;		(display (length args))
-;;		(display "\n")
-;;		(display "fun :")
-;;		(pp fun)
-;;	)
 	(gen (map push-arg args)
 		fun
 		"    addl $" (* 4 (length args)) ", %esp\n"
-	))              ;;; to implement
+		))
+
 (define (push-arg arg)
 	(gen arg
 		"    pushl   %eax\n"))
 
-
 (define (gen-bin-op oper opnd1 opnd2)
   (gen opnd1
-
-       ;; This is slow:
-       ;; "    addl    $-4, %esp\n"
-       ;; "    movl    %eax, (%esp)\n"
-
-       ;; This is faster:
        "    pushl   %eax\n"
-
        opnd2
-
        "    " oper "l    (%esp), %eax\n"
        "    addl    $4, %esp\n"))
 
-(define (gen-car x) "") ;; TODO
-(define (gen-cdr x) "") ;; TODO
-(define (gen-cons a d) "");; (gen-call "    call    _cons\n" (list a d)))
+(define (gen-car x) (gen-unary x "_getcar_ptr")) 
+(define (gen-cdr x) (gen-unary x "_getcdr_ptr")) 
+(define (gen-cons a d) (gen-eq a d "_cons"))
 (define gen-null "    call    _null\n")
+
+(define (gen-unary x name) 
+  (gen x "    pushl    %eax\n" "    call " name "\n"))
+
+(define (gen-eq arg1 arg2 name) 
+  (gen arg1
+       "    pushl    %eax\n"
+       arg2
+       "    pushl    %eax\n"
+       "    call " name "\n"))
 
 (define (gen-let val body)
   (gen val
