@@ -157,9 +157,6 @@
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'define))
 	 "")
-	 ;;(begin
-	 ;;  (set! gcte (cte-extend gcte (list (cadr expr))))
-	 ;;  (set! grte (rte-extend grte (list (comp-expr (caddr expr) fs cte rte))))))
 
 	((and (list? expr)
               (= (length expr) 3)
@@ -231,10 +228,7 @@
           (comp-expr (list-ref expr 2) fs cte rte)
           (comp-expr (list-ref expr 1) (+ fs 1) cte rte)))
 
-	
-
-
-	;;; call updater le fs graduellement.
+	;; Call
 	((list? expr)
 	 (let ((data (map (lambda (x) (comp-expr x (+ fs (length (cdr expr))) cte rte)) expr))) 
 	 (gen-call  (car data) (cdr data))))
@@ -269,16 +263,17 @@
 		"end_if:\n"
 	))
 (define (gen-set v x) "")
-(define (gen-lambda name) (gen "    call " name "\n"))           
+(define (gen-lambda name) (gen "    call " name "\n"))           ;; Pousser les args.
 (define (gen-call fun args)
-	(gen (map push-arg args)
-		fun
-		"    addl $" (* 4 (length args)) ", %esp\n"
-		))
+	(flatten 
+	 (gen (map push-arg args)
+	      fun
+	      "    addl $" (* 4 (length args)) ", %esp\n" 
+	      )))
 
 (define (push-arg arg)
 	(gen arg
-		"    pushl   %eax\n"))
+	     "    pushl   %eax\n"))
 
 (define (gen-bin-op oper opnd1 opnd2)
   (gen opnd1
