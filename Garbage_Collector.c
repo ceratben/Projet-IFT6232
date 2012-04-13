@@ -38,6 +38,11 @@ typedef struct pile{
   struct wagon ** content; 
 } Pile;
 
+typedef struct list{
+  struct list * next;
+  struct wagon * cell;
+} List;
+
 #define GCPRO( var_ref, local_name ) Pile local_name; local_name.content = &var_ref; local_name.previous = gcstack; gcstack = &local_name;
 #define UNGCPRO(local_name) ( gcstack = local_name.previous )
 
@@ -45,6 +50,7 @@ typedef struct pile{
 
 static Wagon *fromspace=NULL, *tospace=NULL, *scan=NULL, *free_mem=NULL;
 static Pile *gcstack=NULL;
+static List * pro_cell = NULL;
 
 // Pretty print
 /*
@@ -132,8 +138,8 @@ void forward(Block * x){
 }
 
 void flip(){
-  printf("Begin Flip: \n");
-  Wagon * temp = free_mem;
+  //printf("Begin Flip: \n");
+  //Wagon * temp = free_mem;
   fromspace = tospace;
   tospace = free_mem->previous;
   scan = free_mem->previous;
@@ -145,7 +151,13 @@ void flip(){
     inner_copy((word *) *GC_pro->content);
     GC_pro = GC_pro->previous;
   }
-  prettyPrint();
+  List * l = pro_cell;
+  while(l != NULL){
+    inner_copy((word *) l->cell);
+    l = l->next;  
+  }
+
+  //prettyPrint();
 }
 
 void scanner(){
@@ -183,20 +195,29 @@ scan
 */
 
 void mem_init(){
+  printf("Begin mem_inti\n");
   Wagon * temp1 = (Wagon *) malloc(sizeof(Wagon));
   Wagon * temp2 = (Wagon *) malloc(sizeof(Wagon));
   if(temp1 == NULL || temp2 == NULL) exit(0);
+
+  printf("after alloc\n");
 
   free_mem = temp1;
   fromspace = temp1;
   tospace = temp1;
   scan = temp1;
-  
+
+  printf("Pointer init\n");
+
   temp2->next = free_mem;
   temp2->previous = free_mem;
 
+  printf("temp2 init\n");
+
   free_mem->next = temp2;
   free_mem->previous = temp2;
+
+  printf("mem_init done\n");
 }
 
 // Methodes de librarie concernant l'allocation.
@@ -328,3 +349,7 @@ int main(){
 }
 
 */
+/* int main(){ */
+/*   mem_init(); */
+/*   return 0; */
+/* } */

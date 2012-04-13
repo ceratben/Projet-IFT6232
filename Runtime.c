@@ -1,7 +1,7 @@
 #include "Garbage_Collector.c"
 
 #define STRING_TAG 0x10
-#define IS_STRING(p) (p & STRING_TAG != 0)
+#define IS_STRING(p) ((p & STRING_TAG) != 0)
 
 word box_fixnum(word w){return BOX(w);}
 word unbox_fixnum(word w){return UNBOX(w);}
@@ -38,13 +38,34 @@ Block * string_cons(char * s){
   return n;
 }
 
-Block * make_closure(word * fun, word * env) {
+int is_eq(word * a, word * b){ return a==b;}
+int is_int_eq(word * a, word * b) {
+  if(is_number(a) && is_number(b))
+    return a==b;
+  return 0;
+}
 
-  Block * newEnv, * c;
+void start(){mem_init();}
 
-  // On fait une copie de env.
 
-  // On cons la fun et la copie de env
+/* Block * make_closure(word * fun, word * env) { */
 
-  return NULL;
+/*   Block * newEnv, * c; */
+
+/*   // On fait une copie de env. */
+
+/*   // On cons la fun et la copie de env */
+
+/*   return NULL; */
+/* } */
+
+void add_root(word * r){
+  // The add of the block is the add of the wagon.
+  // Create a new list element for the root
+  List * root = (List*) malloc(sizeof(List));
+  if(root == NULL) return;
+  root->cell = (Wagon *) r;
+
+  // Add the root to pro_cell
+  pro_cell->next = root;
 }
