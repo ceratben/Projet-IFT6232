@@ -53,11 +53,24 @@
 (define def-code '())
 
 (define (translate ast)
-  (cons (comp-function "_main" ast) def-code))
+  (cons 
+   (comp-function "_main" ast) 
+   def-code))
+
+(define mem-init 
+  (list
+   "    pushl   %ebp\n"
+   "    movl    %esp, %ebp\n"
+   "    subl    $8, %esp\n"
+   "    call    _mem_init\n"
+   "    leave\n"
+   ))
+	
 
 (define (comp-function name expr)
   (gen-function name
-                (comp-expr expr 0 '() '())))
+                (cons mem-init
+		      (comp-expr expr 0 '() '()))))
 
 (define (comp-expr expr fs cte rte) ;; fs = frame size
                                     ;; cte = compile time environment
@@ -169,7 +182,7 @@
         ((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'lambda))
-	 (let ((arg (list-ref expr 1)) (l-name (gensym)))
+	 (let ((arg (reverse (list-ref expr 1))) (l-name (gensym)))
 	   (begin
 	   ;;; push les args dans env
 	     (let loop ((n 1))
@@ -240,8 +253,13 @@
 
 (define gen list)
 
+(define gen-externs 
+  ".globl EXTERN(start)\n";".extern    _mem_init\n"
+   )
+
 (define (gen-function name code)
-  (gen "    .text\n"
+  (gen ;gen-externs
+       "    .text\n"
        ".globl " name "\n"
        name ":\n"
        code
@@ -263,7 +281,7 @@
 		"end_if:\n"
 	))
 (define (gen-set v x) "")
-(define (gen-lambda name) (gen "    call " name "\n"))           ;; Pousser les args.
+(define (gen-lambda name) (gen "    movl " name ", %eax\n"))           ;; Changer pour mover le nom dans eax.
 (define (gen-call fun args)
 	(flatten 
 	 (gen (map push-arg args)

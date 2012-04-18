@@ -413,6 +413,15 @@ L49:
 	movl	-12(%ebp), %eax
 	leave
 	ret
+.globl _main
+_main:
+	pushl	%ebp
+	movl	%esp, %ebp
+	subl	$8, %esp
+	call	_mem_init
+	movl	$0, %eax
+	leave
+	ret
 	.section __IMPORT,__jump_table,symbol_stubs,self_modifying_code+pure_instructions,5
 L_malloc$stub:
 	.indirect_symbol _malloc
