@@ -8,7 +8,7 @@ MINISCM_SOURCE = scanner.scm parser.scm miniscm.scm
 all: miniscm.exe check
 
 check:
-	for t in test1 test2 test3 test4 test5 test6; do \
+	for t in test1 test2 test3 test4 test5 test6 test7 test8; do \
 	  $(MAKE) tests/$$t.test; \
 	done
 
@@ -34,7 +34,7 @@ scanner.scm: scanner.l
 .scm.test: miniscm.exe
 	@echo "******************************************* TESTING $*.scm"
 	./miniscm.exe $*.scm
-	gcc -m32 -o $*.exe $*.s
+	gcc -m32 -o $*.exe $*.s Runtime.s
 	(./$*.exe || echo "exit status = $$?")
 
 clean:

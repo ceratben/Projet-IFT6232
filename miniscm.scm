@@ -76,7 +76,7 @@
                                     ;; cte = compile time environment
                                     ;; rte = run time environment
   (cond ((number? expr)
-         (gen-literal expr))
+         (gen-number expr))
 
 	((boolean? expr)
 	 ;; Problème avec les begins qui retournent tous #f.
@@ -294,9 +294,9 @@
 	     "    pushl   %eax\n"))
 
 (define (gen-bin-op oper opnd1 opnd2)
-  (gen opnd1
+  (gen (gen-unary opnd1 "_unbox_fixnum")
        "    pushl   %eax\n"
-       opnd2
+       (gen-unary opnd2 "_unbox_fixnum")
        "    " oper "l    (%esp), %eax\n"
        "    addl    $4, %esp\n"))
 
@@ -305,15 +305,26 @@
 (define (gen-cons a d) (gen-eq a d "_cons"))
 (define gen-null "    call    _null\n")
 
+(define (align count) 
+       "pushl	%ebp\n
+	movl	%esp, %ebp\n
+	subl	$24, %esp\n")
+
 (define (gen-unary x name) 
-  (gen x "    pushl    %eax\n" "    call " name "\n"))
+  (gen (align 1) x "    pushl    %eax\n" "    call " name "\n" "leave \n"))
 
 (define (gen-eq arg1 arg2 name) 
-  (gen arg1
-       "    pushl    %eax\n"
-       arg2
-       "    pushl    %eax\n"
-       "    call " name "\n"))
+  (gen-C-bin arg1 arg2 name))
+
+(define (gen-C-bin arg1 arg2 name)
+  (gen  (align 2)
+	arg1
+	"    pushl    %eax\n"
+	arg2
+	"    pushl    %eax\n"
+	"    call    "name "\n"
+	"    leave\n"
+       ))
 
 (define (gen-let val body)
   (gen val
@@ -326,6 +337,8 @@
 
 (define (gen-literal n)
   (gen "    movl    $" n ", %eax\n"))
+
+((define (gen-number n)) (gen-unary n "_box_fixnum"))
 
 ;; Main program:
 
