@@ -19,7 +19,7 @@
 	 ((define ,var ,expr) 
 	  (if (constant? ,expr) 
 	      (begin (propagate ,var ,expr) ast)
-	      (const-prop ,expr)))
+	      `(define ,var ,@(const-prop ,expr))))
 
 	 ; lambda used as let
 	 (((lambda ,arg1 ,expr) . ,args )
@@ -31,7 +31,7 @@
 		   #t))
 	     ,arg1
 	     ,args)
-	    (const-prop ,expr)
+	    `(lambda ,arg1 (const-prop ,expr) ,@(map const-prop ,args))
 	    ))
 
 	 ;list
