@@ -12,14 +12,34 @@
 	  count
 	  (const-lookup name (cdr list) (+ count 1)))))
 
+(define (remove-const i) 
+  (begin 
+    (set! const-list-name
+	  (filter 
+	   (lambda (x) (let ((ind 0)) 
+			 (if (= ind i)
+			     #f
+			     (and (set! ind (+ 1 ind)) #t))))
+	   const-list-name
+	   ))
+    (set! const-list-val
+	  (filter 
+	   (lambda (x) (let ((ind 0)) 
+			 (if (= ind i)
+			     #f
+			     (and (set! ind (+ 1 ind)) #t))))
+	   const-list-val
+	   ))
+    ))
+
 ;; Transform source->source must return something
 (define (const-prop ast)
   (match ast
 	 ; (define var const)
 	 ((define ,var ,expr) 
-	  (if (constant? ,expr) 
-	      (begin (propagate ,var ,expr) ast)
-	      `(define ,var ,@(const-prop ,expr))))
+	  (if (constant? expr) 
+	      (begin (propagate var expr) ast)
+	      `(define ,var ,@(const-prop expr))))
 
 	 ; lambda used as let
 	 (((lambda ,arg1 ,expr) . ,args )
@@ -34,15 +54,24 @@
 	    `(lambda ,arg1 (const-prop ,expr) ,@(map const-prop ,args))
 	    ))
 
+	 ;set!
+	 ((set! ,var ,expr)
+	  (let ((i (const-lookup var const-list-name 0)))
+	    (if i
+		(begin
+		  (remove-const i)
+		  `(set! ,var ,@(const-prop expr)))
+		`(set! ,var ,@(const-prop expr)))))
+
 	 ;list
 	 ;symbol
 	 ((,expr)
-	  (if (list? ,expr)
-	      (map const-prop ,expr)
-	      (let (i (const-lookup ,expr const-list-name 0)) 
+	  (if (list? expr)
+	      (map const-prop expr)
+	      (let ((i (const-lookup expr const-list-name 0))) 
 		(if i
 		    (list-ref const-list-val i)
-		    ,expr))
+		    expr))
 	      ))
 	 ;else
 	 (else ast)

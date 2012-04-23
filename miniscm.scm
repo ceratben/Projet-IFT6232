@@ -5,6 +5,7 @@
 (include "freevar.scm")
 (include "clo-conv.scm")
 (include "alpha-conv.scm")
+(include "constant-prop.scm")
 
 ;; Plan pour la suite:
 ;; Refaire les phases d'expansions macro -> alpha-conv etc -> passe globale *-> comp-expr -> gen-code
@@ -342,14 +343,23 @@
 
 ;; Main program:
 
+(define (exec-include expr)
+  (match expr
+	 ((include ,name) (parse name))
+	 ((begin ,xs) `(begin ,@(map exec-include xs)))
+	 (,x x)
+	 ))
+
 (define (main source-filename)
   (let ((ast (parse source-filename)))
     (let ((code
-	   (translate 
-	    (expand-program
-	     (closure-conversion
-	      (alpha-conv
-	       (expand-program ast)))))))
+	   (translate
+	    (constant-prop
+	     (expand-program
+	      (closure-conversion
+	       (alpha-conv
+		(exec-include
+		 (expand-program ast)))))))))
       (with-output-to-file
           (string-append (path-strip-extension source-filename) ".s")
         (lambda ()
