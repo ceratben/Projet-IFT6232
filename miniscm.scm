@@ -306,13 +306,13 @@
 (define (gen-cons a d) (gen-eq a d "_cons"))
 (define gen-null "    call    _null\n")
 
-(define (align count) 
-       "pushl	%ebp\n
-	movl	%esp, %ebp\n
-	subl	$24, %esp\n")
+(define (align count) (gen
+       "    pushl    %ebp\n"
+       "    movl     %esp, %ebp\n"
+       "    subl     $24, %esp\n"))
 
 (define (gen-unary x name) 
-  (gen (align 1) x "    pushl    %eax\n" "    call " name "\n" "leave \n"))
+  (gen (align 1) x "    pushl    %eax\n" "    call    " name "\n" "    leave \n"))
 
 (define (gen-eq arg1 arg2 name) 
   (gen-C-bin arg1 arg2 name))
@@ -339,7 +339,7 @@
 (define (gen-literal n)
   (gen "    movl    $" n ", %eax\n"))
 
-((define (gen-number n)) (gen-unary n "_box_fixnum"))
+(define (gen-number n) (gen-unary (gen "    movl $" n ", %eax\n") "_box_fixnum"))
 
 ;; Main program:
 
@@ -354,7 +354,7 @@
   (let ((ast (parse source-filename)))
     (let ((code
 	   (translate
-	    (constant-prop
+	    (const-prop
 	     (expand-program
 	      (closure-conversion
 	       (alpha-conv
