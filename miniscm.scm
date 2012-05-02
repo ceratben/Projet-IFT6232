@@ -69,10 +69,11 @@
    ))
 
 (define (hash-symbol s)
-  (string-append "_" (list->string 
-		      (map (lambda (x) 
-			     (if (equal? x #\-) #\_ x)) 
-			   (string->list(symbol->string s))))))
+  (string->symbol 
+   (list->string 
+    (map (lambda (x) 
+	   (if (equal? x #\-) #\_ x)) 
+	 (string->list(symbol->string s))))))
 
 (define sym-table '())
 
@@ -143,7 +144,7 @@
 		     (gen-parameter (+ fs index))
 		     ;;(if (and (pair? index) (string? (car index))) 
 		     (gen-call-global index) )
-		     ;;index))
+		     ;index)
 		 )
 	       ;;; retourne un litéral?
                (error "undefined variable" expr))))	
@@ -166,10 +167,7 @@
 		 (begin
 		   (set! cte (cte-extend cte (list (cadr (car x)))))
 		   ;;; On remplace les - par des _ pour l'étiquette.
-		   (let ((name (string-append "_" (list->string 
-						   (map (lambda (x) 
-							  (if (equal? x #\-) #\_ x)) 
-							(string->list(symbol->string(cadr (car x)))))))))
+		   (let ((name (hash-symbol (cadr (car x)))))
 		   (begin 
 		     (set! rte (rte-extend rte (list name)))
 		     (set! def-code 
@@ -187,10 +185,16 @@
 		      (= (length (car x)) 3)
 		      (eq? (list-ref (car x) 0) 'set!))
 		 (begin
+		   ;; Semble louche, a revoir.
 		   (gen-set (list-ref (car x) 1) (comp-expr (list-ref (car x) 2) fs cte rte))
 		   (loop (cdr x))))
 		
-		(else (list (comp-expr (car x) fs cte rte) (loop (cdr x) )))
+		(else (list 
+		       (let ((c (comp-expr (car x) fs cte rte)))
+			 (if (symbol? c)
+			     (list "    call    " c "\n")
+			     c))
+		       (loop (cdr x) )))
 		))))
 
 	;;; let to change
@@ -242,7 +246,9 @@
 		 (set! def-code 
 			   (cons (gen-global 
 				  l-name
-				  code )
+				  (if (symbol? code)
+					(list "    call    " code "\n")
+					code))
 				 def-code))
 		 (gen-lambda l-name)))
 	     )))
@@ -326,15 +332,17 @@
   (gen "\n" name ":\n" code "    ret\n" ))
 
 (define (gen-call-global name)
-  (gen "    call    " name "\n"))
+  (if (symbol? name)
+      (gen "    call    " name "\n")
+      name))
 
 (define (gen-if c t f)
 	(let ((sym-else (gensym)) (sym-end (gensym)))
 		(gen
 			c 
-			"    jz " sym-else "\n" 
+			"    jz      " sym-else "\n" 
 			t 
-			"    jmp " sym-end "\n" 
+			"    jmp     " sym-end "\n" 
 			sym-else ":\n" 
 			f 
 			sym-end ":\n"
@@ -344,8 +352,9 @@
 (define (gen-call fun args)
 	(flatten 
 	 (gen (map push-arg args)
-	      "    call    " 
-	      fun "\n"
+	      (if (symbol? fun)
+		  (gen "    call    " fun "\n")
+		  fun)
 	      "    addl $" (* 4 (length args)) ", %esp\n" 
 	      )))
 
@@ -365,12 +374,18 @@
 (define (gen-car x) (gen-unary x "_getcar_ptr")) 
 (define (gen-cdr x) (gen-unary x "_getcdr_ptr")) 
 (define (gen-cons a d) (gen-eq a d "_cons"))
-(define gen-null "    call    _null\n")
+(define gen-null '_null)
 
-(define (align count) (gen
+(define (align count) 
+  (if (= count 0)
+      (gen
        "    pushl    %ebp\n"
        "    movl     %esp, %ebp\n"
-       "    subl     $24, %esp\n"))
+       "    subl     $8, %esp\n")
+      (gen
+       "    pushl    %ebp\n"
+       "    movl     %esp, %ebp\n"
+       "    subl     $24, %esp\n")))
 
 (define (gen-unary x name) 
   (gen (align 1) (push-arg x) "    call    " name "\n" "    leave \n"))
