@@ -347,9 +347,16 @@ int main(){
   
   return 0;
 }
-
 */
-/* int main(){ */
-/*   mem_init(); */
-/*   return 0; */
-/* } */
+/*
+void test(word * a, word * b) {return;}
+void test2(word * a) {return;}
+
+ int main(){ 
+   mem_init(); 
+   test(0,1);
+   test(2,3);
+   //test2(2);
+   return 0; 
+ } 
+*/

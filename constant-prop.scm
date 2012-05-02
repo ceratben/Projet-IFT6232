@@ -1,3 +1,5 @@
+; TO FIX
+
 (define const-list-name '())
 (define const-list-val '())
 (define (propagate name const) 
@@ -8,7 +10,7 @@
 (define (const-lookup name list count)
   (if (null? list)
       #f
-      (if (eq? list name)
+      (if (eq? (car list) name)
 	  count
 	  (const-lookup name (cdr list) (+ count 1)))))
 
@@ -39,19 +41,19 @@
 	 ((define ,var ,expr) 
 	  (if (constant? expr) 
 	      (begin (propagate var expr) ast)
-	      `(define ,var ,@(const-prop expr))))
+	      `(define ,var ,(const-prop expr))))
 
 	 ; lambda used as let
 	 (((lambda ,arg1 ,expr) . ,args )
-	  (begin 
-	    (map 
-	     (lambda (x y) 
-	       (if (constant? y) 
-		   (propagate x y)
-		   #t))
-	     ,arg1
-	     ,args)
-	    `(lambda ,arg1 (const-prop ,expr) ,@(map const-prop ,args))
+	  (let 
+	    ((t 
+	      (map 
+	       (lambda (x y) 
+		 (and (constant? y) 
+		      (propagate x y)))
+	       arg1
+	       args)))
+	    `((lambda ,arg1 ,(const-prop expr)) ,@(map const-prop args))
 	    ))
 
 	 ;set!
@@ -60,12 +62,17 @@
 	    (if i
 		(begin
 		  (remove-const i)
-		  `(set! ,var ,@(const-prop expr)))
-		`(set! ,var ,@(const-prop expr)))))
+		  `(set! ,var ,(const-prop expr)))
+		`(set! ,var ,(const-prop expr)))))
+
+	 ((begin . ,expr)
+	  `(begin ,@(map const-prop expr)))
+
+	 
 
 	 ;list
 	 ;symbol
-	 ((,expr)
+	 (,expr
 	  (if (list? expr)
 	      (map const-prop expr)
 	      (let ((i (const-lookup expr const-list-name 0))) 
@@ -73,8 +80,6 @@
 		    (list-ref const-list-val i)
 		    expr))
 	      ))
-	 ;else
-	 (,v ast)
 ))
 
 

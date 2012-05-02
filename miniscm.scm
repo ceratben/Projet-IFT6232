@@ -6,6 +6,7 @@
 (include "clo-conv.scm")
 (include "alpha-conv.scm")
 (include "constant-prop.scm")
+(include "stdlib.scm")
 
 ;; Plan pour la suite:
 ;; Refaire les phases d'expansions macro -> alpha-conv etc -> passe globale *-> comp-expr -> gen-code
