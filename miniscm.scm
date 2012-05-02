@@ -174,7 +174,10 @@
 		     (set! def-code 
 			   (cons (gen-global 
 				  name
-				  (comp-expr (list-ref (car x) 2) fs cte rte)) 
+				  (let ((c (comp-expr (list-ref (car x) 2) fs cte rte)))
+				    (if (symbol? c)
+					(list "    call    " c "\n")
+					c))) 
 				 def-code))
 		   (loop (cdr x)))
 		   )))
@@ -336,7 +339,7 @@
 			sym-end ":\n"
 		)))
 (define (gen-set v x) (gen-eq v x setcar_ptr))
-(define (gen-lambda name) (gen name));(gen "    movl " name ", %eax\n")) Changer pour mover le nom dans eax.
+(define (gen-lambda name) name);(gen "    movl " name ", %eax\n")) Changer pour mover le nom dans eax.
 (define (gen-call fun args)
 	(flatten 
 	 (gen (map push-arg args)
@@ -346,7 +349,9 @@
 	      )))
 
 (define (push-arg arg)
-	(gen arg
+	(gen (if (symbol? arg)
+		 (gen "    movl    " arg " , %eax\n")
+		 arg)
 	     "    pushl   %eax\n"))
 
 (define (gen-bin-op oper opnd1 opnd2)
@@ -367,17 +372,15 @@
        "    subl     $24, %esp\n"))
 
 (define (gen-unary x name) 
-  (gen (align 1) x "    pushl    %eax\n" "    call    " name "\n" "    leave \n"))
+  (gen (align 1) (push-arg x) "    call    " name "\n" "    leave \n"))
 
 (define (gen-eq arg1 arg2 name) 
   (gen-C-bin arg1 arg2 name))
 
 (define (gen-C-bin arg1 arg2 name)
   (gen  (align 2)
-	arg1
-	"    pushl    %eax\n"
-	arg2
-	"    pushl    %eax\n"
+	(push-arg arg1)
+	(push-arg arg2)
 	"    call    "name "\n"
 	"    leave\n"
        ))
