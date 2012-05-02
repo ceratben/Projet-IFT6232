@@ -58,7 +58,7 @@ void start(){mem_init();}
 
 /*   return NULL; */
 /* } */
-
+// Chainer a l'envers
 void add_root(word * r){
   // The add of the block is the add of the wagon.
   // Create a new list element for the root
@@ -67,5 +67,15 @@ void add_root(word * r){
   root->cell = (Wagon *) r;
 
   // Add the root to pro_cell
-  pro_cell->next = root;
+  //pro_cell->next = root;
+  root->next = pro_cell;
+  pro_cell = root;
+}
+
+void remove_root() {
+  // Libère la racine
+  List * t = pro_cell->next;
+  free(pro_cell);
+  // Pop
+  pro_cell = t;
 }

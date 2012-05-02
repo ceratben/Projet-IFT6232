@@ -689,8 +689,36 @@ L104:
 	leal	_pro_cell-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %edx
 	movl	-12(%ebp), %eax
+	movl	%edx, (%eax)
+	leal	_pro_cell-"L00000000006$pb"(%ebx), %edx
+	movl	-12(%ebp), %eax
 	movl	%eax, (%edx)
 L103:
+	addl	$36, %esp
+	popl	%ebx
+	leave
+	ret
+.globl _remove_root
+_remove_root:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%ebx
+	subl	$36, %esp
+	call	L107
+"L00000000007$pb":
+L107:
+	popl	%ebx
+	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
+	movl	(%eax), %eax
+	movl	(%eax), %eax
+	movl	%eax, -12(%ebp)
+	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
+	movl	(%eax), %eax
+	movl	%eax, (%esp)
+	call	L_free$stub
+	leal	_pro_cell-"L00000000007$pb"(%ebx), %edx
+	movl	-12(%ebp), %eax
+	movl	%eax, (%edx)
 	addl	$36, %esp
 	popl	%ebx
 	leave
@@ -701,6 +729,9 @@ L_malloc$stub:
 	hlt ; hlt ; hlt ; hlt ; hlt
 L_exit$stub:
 	.indirect_symbol _exit
+	hlt ; hlt ; hlt ; hlt ; hlt
+L_free$stub:
+	.indirect_symbol _free
 	hlt ; hlt ; hlt ; hlt ; hlt
 L_puts$stub:
 	.indirect_symbol _puts

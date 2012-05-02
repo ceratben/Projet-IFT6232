@@ -214,7 +214,7 @@
   (match expr
 
     ((begin)
-     `#f)
+     '__void)
 
     ((begin ,E . ,tail)
      (let ((x (expand-macros E menv)))

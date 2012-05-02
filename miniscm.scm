@@ -66,7 +66,14 @@
    "    call    _mem_init\n"
    "    leave\n"
    ))
-	
+
+(define (hash-symbol s)
+  (string-append "_" (list->string 
+		      (map (lambda (x) 
+			     (if (equal? x #\-) #\_ x)) 
+			   (string->list(symbol->string s))))))
+
+(define sym-table '())
 
 (define (comp-function name expr)
   (gen-function name
@@ -77,7 +84,20 @@
                                     ;; cte = compile time environment
                                     ;; rte = run time environment
   (cond ((number? expr)
-         (gen-number expr))
+         (let ((l-name (gensym)))
+			   (begin
+				 ;; Creer les blocs assembleurs associés.
+				 (let ((code (gen-number expr)))
+				   (set! def-code 
+					   (cons (gen-global 
+						  l-name
+						  code )
+						 def-code))
+				 )
+				 l-name
+				 )))
+
+	((eq? expr '__void) "") ; Ne rien faire si c'est une terminaison de begin.
 
 	((boolean? expr)
 	 ;; Problème avec les begins qui retournent tous #f.
@@ -85,14 +105,33 @@
 	 "")
 
 	;;;a faire
-	;;;((string? expr)
-	 ;;;(begin (pp expr) ""))
+	((string? expr)
+	 (let ((tag (gensym)))
+	       (begin
+		 (set! def-code 
+		       (cons (gen-global tag
+					 (gen-string expr))
+		       def-code))
+		 tag)))
 
 	((null? expr) gen-null)
  
-	;; TODO Gerer les symboles et litt.
+	;; Gerer les symboles et TODO list litt.
 	((and (list? expr) (= (length expr) 2) (eq? (car expr) 'quote)) 
-	 gen-null)
+	 (if (list? (cadr expr))
+	     gen-null ; TODO list lit go here
+	     (let ((tag (hash-symbol (cadr expr))))
+	       (if (member? tag sym-table)
+		   (gen-call-global tag)
+		   (begin 
+		     (set! def-code
+			   (cons (gen-global tag 
+					     (list "    movl    " tag ", %eax\n"))
+				 def-code ))
+		     (set! sym-table
+			   (cons tag sym-table))
+		     (gen-call-global tag)
+		     )))))
 
 	;;; Var
         ((symbol? expr)
@@ -266,27 +305,43 @@
        code
        "    ret\n"))
 
+(define (gen-string text) (gen-string-list (map char->integer (string->list text))))
+(define (gen-string-list list)
+  (if (null? list)
+      gen-null
+      (gen-C-bin (car list) (gen-list (cdr list)) "_cons_string")
+      ))
+
+(define (gen-list list) 
+  (if (null? list)
+      gen-null
+      (gen-cons (car list) (gen-list (cdr list)))
+   ))
+
 (define (gen-global name code)
   (gen "\n" name ":\n" code "    ret\n" ))
 
 (define (gen-call-global name)
   (gen "    call    " name "\n"))
 
-(define (gen-if c t f) (gen
-		c 
-		"    jz else\n" 
-		t 
-		"    jmp end_if\n" 
-		"else:\n" 
-		f 
-		"end_if:\n"
-	))
-(define (gen-set v x) "")
-(define (gen-lambda name) (gen "    movl " name ", %eax\n"))           ;; Changer pour mover le nom dans eax.
+(define (gen-if c t f)
+	(let ((sym-else (gensym)) (sym-end (gensym)))
+		(gen
+			c 
+			"    jz " sym-else "\n" 
+			t 
+			"    jmp " sym-end "\n" 
+			sym-else ":\n" 
+			f 
+			sym-end ":\n"
+		)))
+(define (gen-set v x) (gen-eq v x setcar_ptr))
+(define (gen-lambda name) (gen name));(gen "    movl " name ", %eax\n")) Changer pour mover le nom dans eax.
 (define (gen-call fun args)
 	(flatten 
 	 (gen (map push-arg args)
-	      fun
+	      "    call    " 
+	      fun "\n"
 	      "    addl $" (* 4 (length args)) ", %esp\n" 
 	      )))
 
@@ -346,7 +401,7 @@
 (define (exec-include expr)
   (match expr
 	 ((include ,name) (parse name))
-	 ((begin ,xs) `(begin ,@(map exec-include xs)))
+	 ((begin . ,xs) `(begin ,@(map exec-include xs)))
 	 (,x x)
 	 ))
 
