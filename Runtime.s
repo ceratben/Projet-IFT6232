@@ -660,29 +660,40 @@ L96:
 	movl	-12(%ebp), %eax
 	leave
 	ret
-.globl _start
-_start:
-	pushl	%ebp
-	movl	%esp, %ebp
-	subl	$8, %esp
-	call	_mem_init
-	leave
-	ret
+	.cstring
+LC5:
+	.ascii "In add_root\0"
+LC6:
+	.ascii "Root not null\0"
+LC7:
+	.ascii "End add_root\0"
+	.text
 .globl _add_root
 _add_root:
 	pushl	%ebp
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$36, %esp
-	call	L104
+	call	L103
 "L00000000006$pb":
-L104:
+L103:
 	popl	%ebx
+	leal	LC5-"L00000000006$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
+	movl	8(%ebp), %eax
+	xorl	$1, %eax
+	andl	$1, %eax
+	testl	%eax, %eax
+	je	L102
 	movl	$8, (%esp)
 	call	L_malloc$stub
 	movl	%eax, -12(%ebp)
 	cmpl	$0, -12(%ebp)
-	je	L103
+	je	L102
+	leal	LC6-"L00000000006$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
 	movl	8(%ebp), %edx
 	movl	-12(%ebp), %eax
 	movl	%edx, 4(%eax)
@@ -693,32 +704,58 @@ L104:
 	leal	_pro_cell-"L00000000006$pb"(%ebx), %edx
 	movl	-12(%ebp), %eax
 	movl	%eax, (%edx)
-L103:
+	leal	LC7-"L00000000006$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
+L102:
 	addl	$36, %esp
 	popl	%ebx
 	leave
 	ret
+	.cstring
+LC8:
+	.ascii "In remove_root\0"
+LC9:
+	.ascii "In remove_root1\0"
+LC10:
+	.ascii "In remove_root2\0"
+LC11:
+	.ascii "End remove_root\0"
+	.text
 .globl _remove_root
 _remove_root:
 	pushl	%ebp
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$36, %esp
-	call	L107
+	call	L108
 "L00000000007$pb":
-L107:
+L108:
 	popl	%ebx
+	leal	LC8-"L00000000007$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
+	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
+	movl	(%eax), %eax
+	testl	%eax, %eax
+	je	L107
 	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	(%eax), %eax
 	movl	%eax, -12(%ebp)
-	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
-	movl	(%eax), %eax
+	leal	LC9-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
-	call	L_free$stub
+	call	L_puts$stub
+	leal	LC10-"L00000000007$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
 	leal	_pro_cell-"L00000000007$pb"(%ebx), %edx
 	movl	-12(%ebp), %eax
 	movl	%eax, (%edx)
+	leal	LC11-"L00000000007$pb"(%ebx), %eax
+	movl	%eax, (%esp)
+	call	L_puts$stub
+L107:
 	addl	$36, %esp
 	popl	%ebx
 	leave
@@ -729,9 +766,6 @@ L_malloc$stub:
 	hlt ; hlt ; hlt ; hlt ; hlt
 L_exit$stub:
 	.indirect_symbol _exit
-	hlt ; hlt ; hlt ; hlt ; hlt
-L_free$stub:
-	.indirect_symbol _free
 	hlt ; hlt ; hlt ; hlt ; hlt
 L_puts$stub:
 	.indirect_symbol _puts

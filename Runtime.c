@@ -45,37 +45,44 @@ int is_int_eq(word * a, word * b) {
   return 0;
 }
 
-void start(){mem_init();}
-
-
-/* Block * make_closure(word * fun, word * env) { */
-
-/*   Block * newEnv, * c; */
-
-/*   // On fait une copie de env. */
-
-/*   // On cons la fun et la copie de env */
-
-/*   return NULL; */
-/* } */
-// Chainer a l'envers
 void add_root(word * r){
+  printf("In add_root\n");
+  //printf("r: %p\n", r);
+
+  if(!IS_POINTER((word) r)) return;
+
   // The add of the block is the add of the wagon.
   // Create a new list element for the root
   List * root = (List*) malloc(sizeof(List));
   if(root == NULL) return;
+
+  printf("Root not null\n");
   root->cell = (Wagon *) r;
 
   // Add the root to pro_cell
   //pro_cell->next = root;
   root->next = pro_cell;
   pro_cell = root;
+  //printf("r: %p\n", r);
+  printf("End add_root\n");
 }
 
 void remove_root() {
   // Libère la racine
+  printf("In remove_root\n");
+  if(pro_cell == NULL) return;
   List * t = pro_cell->next;
-  free(pro_cell);
+  printf("In remove_root1\n");
+  //free(pro_cell);
+  printf("In remove_root2\n");
   // Pop
   pro_cell = t;
+  printf("End remove_root\n");
 }
+
+/*int main(){
+  add_root(0xF0);
+  remove_root();
+  return 0;
+}
+*/

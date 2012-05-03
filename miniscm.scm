@@ -6,7 +6,6 @@
 (include "clo-conv.scm")
 (include "alpha-conv.scm")
 (include "constant-prop.scm")
-(include "stdlib.scm")
 
 ;; Plan pour la suite:
 ;; Refaire les phases d'expansions macro -> alpha-conv etc -> passe globale *-> comp-expr -> gen-code
@@ -347,7 +346,7 @@
 			f 
 			sym-end ":\n"
 		)))
-(define (gen-set v x) (gen-eq v x setcar_ptr))
+(define (gen-set v x) (gen-eq v x "_setcar_ptr"))
 (define (gen-lambda name) name);(gen "    movl " name ", %eax\n")) Changer pour mover le nom dans eax.
 (define (gen-call fun args)
 	(flatten 
@@ -355,14 +354,32 @@
 	      (if (symbol? fun)
 		  (gen "    call    " fun "\n")
 		  fun)
+	      "    pushl   %eax\n"
+	      (map pop-arg args)
+	      "    pop     %eax\n"
 	      "    addl $" (* 4 (length args)) ", %esp\n" 
 	      )))
 
 (define (push-arg arg)
-	(gen (if (symbol? arg)
-		 (gen "    movl    " arg " , %eax\n")
-		 arg)
-	     "    pushl   %eax\n"))
+	(let ((c (if (symbol? arg)
+		     (gen "    movl    " arg " , %eax\n")
+		     arg)))
+	 (gen ;(gen-unary arg "_add_root") <- Ridiculement stupide...
+	  (align 1)
+	  c
+	  "    pushl   %eax\n"
+	  "    call    _add_root\n"
+	  "    leave\n"
+	  c
+	  "    pushl   %eax\n"
+	  )))
+
+(define (pop-arg n) 
+      (gen 
+       (align 0)
+       "    call    _remove_root\n"
+       "    leave\n")
+   )
 
 (define (gen-bin-op oper opnd1 opnd2)
   (gen (gen-unary opnd1 "_unbox_fixnum")
