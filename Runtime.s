@@ -10,6 +10,59 @@ _tag_ref:
 .lcomm _gcstack,4,2
 .lcomm _pro_cell,4,2
 	.text
+.globl _add_root
+_add_root:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%ebx
+	subl	$36, %esp
+	call	L5
+"L00000000001$pb":
+L5:
+	popl	%ebx
+	movl	$8, (%esp)
+	call	L_malloc$stub
+	movl	%eax, -12(%ebp)
+	cmpl	$0, -12(%ebp)
+	je	L4
+	movl	8(%ebp), %edx
+	movl	-12(%ebp), %eax
+	movl	%edx, 4(%eax)
+	leal	_pro_cell-"L00000000001$pb"(%ebx), %eax
+	movl	(%eax), %edx
+	movl	-12(%ebp), %eax
+	movl	%edx, (%eax)
+	leal	_pro_cell-"L00000000001$pb"(%ebx), %edx
+	movl	-12(%ebp), %eax
+	movl	%eax, (%edx)
+L4:
+	addl	$36, %esp
+	popl	%ebx
+	leave
+	ret
+.globl _remove_root
+_remove_root:
+	pushl	%ebp
+	movl	%esp, %ebp
+	subl	$24, %esp
+	call	L10
+"L00000000002$pb":
+L10:
+	popl	%ecx
+	leal	_pro_cell-"L00000000002$pb"(%ecx), %eax
+	movl	(%eax), %eax
+	testl	%eax, %eax
+	je	L9
+	leal	_pro_cell-"L00000000002$pb"(%ecx), %eax
+	movl	(%eax), %eax
+	movl	(%eax), %eax
+	movl	%eax, -12(%ebp)
+	leal	_pro_cell-"L00000000002$pb"(%ecx), %edx
+	movl	-12(%ebp), %eax
+	movl	%eax, (%edx)
+L9:
+	leave
+	ret
 .globl _move
 _move:
 	pushl	%ebp
@@ -18,7 +71,7 @@ _move:
 	movl	8(%ebp), %eax
 	movl	16(%eax), %eax
 	testl	%eax, %eax
-	je	L2
+	je	L12
 	movl	8(%ebp), %eax
 	movl	16(%eax), %edx
 	movl	8(%ebp), %eax
@@ -29,7 +82,7 @@ _move:
 	movl	8(%ebp), %eax
 	movl	16(%eax), %eax
 	movl	%eax, 16(%edx)
-L2:
+L12:
 	movl	8(%ebp), %edx
 	movl	12(%ebp), %eax
 	movl	%eax, 20(%edx)
@@ -52,57 +105,57 @@ _inner_copy:
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$36, %esp
-	call	L15
-"L00000000001$pb":
-L15:
+	call	L25
+"L00000000003$pb":
+L25:
 	popl	%ebx
 	cmpl	$0, 8(%ebp)
-	je	L14
+	je	L24
 	movl	8(%ebp), %eax
 	movl	%eax, -12(%ebp)
 	movl	-12(%ebp), %eax
 	movl	12(%eax), %edx
-	leal	_tag_ref-"L00000000001$pb"(%ebx), %eax
+	leal	_tag_ref-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	andl	%edx, %eax
 	testl	%eax, %eax
-	jne	L14
-	leal	_tospace-"L00000000001$pb"(%ebx), %eax
+	jne	L24
+	leal	_tospace-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	cmpl	%eax, -12(%ebp)
-	jne	L9
-	leal	_tospace-"L00000000001$pb"(%ebx), %eax
+	jne	L19
+	leal	_tospace-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	20(%eax), %edx
-	leal	_tospace-"L00000000001$pb"(%ebx), %eax
+	leal	_tospace-"L00000000003$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	jmp	L11
-L9:
-	leal	_fromspace-"L00000000001$pb"(%ebx), %eax
+	jmp	L21
+L19:
+	leal	_fromspace-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	cmpl	%eax, -12(%ebp)
-	jne	L12
-	leal	_fromspace-"L00000000001$pb"(%ebx), %eax
+	jne	L22
+	leal	_fromspace-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	16(%eax), %edx
-	leal	_fromspace-"L00000000001$pb"(%ebx), %eax
+	leal	_fromspace-"L00000000003$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-L12:
-	leal	_tospace-"L00000000001$pb"(%ebx), %eax
+L22:
+	leal	_tospace-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, 4(%esp)
 	movl	-12(%ebp), %eax
 	movl	%eax, (%esp)
 	call	_move
-L11:
+L21:
 	movl	-12(%ebp), %eax
 	movl	12(%eax), %edx
-	leal	_tag_ref-"L00000000001$pb"(%ebx), %eax
+	leal	_tag_ref-"L00000000003$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	orl	%eax, %edx
 	movl	-12(%ebp), %eax
 	movl	%edx, 12(%eax)
-L14:
+L24:
 	addl	$36, %esp
 	popl	%ebx
 	leave
@@ -117,18 +170,18 @@ _forward:
 	xorl	$1, %eax
 	andl	$1, %eax
 	testb	%al, %al
-	je	L17
+	je	L27
 	movl	8(%ebp), %eax
 	movl	(%eax), %eax
 	movl	%eax, (%esp)
 	call	_inner_copy
-	jmp	L21
-L17:
+	jmp	L31
+L27:
 	movl	8(%ebp), %eax
 	movl	(%eax), %eax
 	andl	$3, %eax
 	cmpl	$3, %eax
-	jne	L21
+	jne	L31
 	movl	8(%ebp), %eax
 	addl	$4, %eax
 	movl	%eax, (%esp)
@@ -137,7 +190,7 @@ L17:
 	addl	$8, %eax
 	movl	%eax, (%esp)
 	call	_forward
-L21:
+L31:
 	leave
 	ret
 .globl _flip
@@ -146,61 +199,76 @@ _flip:
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$36, %esp
-	call	L30
-"L00000000002$pb":
-L30:
+	call	L44
+"L00000000004$pb":
+L44:
 	popl	%ebx
-	leal	_tospace-"L00000000002$pb"(%ebx), %eax
+	leal	_tospace-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %edx
-	leal	_fromspace-"L00000000002$pb"(%ebx), %eax
+	leal	_fromspace-"L00000000004$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	leal	_free_mem-"L00000000002$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	20(%eax), %edx
-	leal	_tospace-"L00000000002$pb"(%ebx), %eax
+	leal	_tospace-"L00000000004$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	leal	_free_mem-"L00000000002$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	20(%eax), %edx
-	leal	_scan-"L00000000002$pb"(%ebx), %eax
+	leal	_scan-"L00000000004$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	leal	_tag_ref-"L00000000002$pb"(%ebx), %eax
+	leal	_tag_ref-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, %edx
 	xorl	$3, %edx
-	leal	_tag_ref-"L00000000002$pb"(%ebx), %eax
+	leal	_tag_ref-"L00000000004$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	leal	_gcstack-"L00000000002$pb"(%ebx), %eax
+	leal	_gcstack-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, -16(%ebp)
-	jmp	L23
-L24:
+	jmp	L33
+L34:
+	movl	-16(%ebp), %eax
+	movl	4(%eax), %eax
+	movl	(%eax), %eax
+	xorl	$1, %eax
+	andl	$1, %eax
+	testb	%al, %al
+	je	L35
 	movl	-16(%ebp), %eax
 	movl	4(%eax), %eax
 	movl	(%eax), %eax
 	movl	%eax, (%esp)
 	call	_inner_copy
+L35:
 	movl	-16(%ebp), %eax
 	movl	(%eax), %eax
 	movl	%eax, -16(%ebp)
-L23:
+L33:
 	cmpl	$0, -16(%ebp)
-	jne	L24
-	leal	_pro_cell-"L00000000002$pb"(%ebx), %eax
+	jne	L34
+	leal	_pro_cell-"L00000000004$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, -12(%ebp)
-	jmp	L26
-L27:
+	jmp	L38
+L39:
+	movl	-12(%ebp), %eax
+	movl	4(%eax), %eax
+	xorl	$1, %eax
+	andl	$1, %eax
+	testb	%al, %al
+	je	L40
 	movl	-12(%ebp), %eax
 	movl	4(%eax), %eax
 	movl	%eax, (%esp)
 	call	_inner_copy
+L40:
 	movl	-12(%ebp), %eax
 	movl	(%eax), %eax
 	movl	%eax, -12(%ebp)
-L26:
+L38:
 	cmpl	$0, -12(%ebp)
-	jne	L27
+	jne	L39
 	addl	$36, %esp
 	popl	%ebx
 	leave
@@ -211,30 +279,30 @@ _scanner:
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$20, %esp
-	call	L36
-"L00000000003$pb":
-L36:
+	call	L50
+"L00000000005$pb":
+L50:
 	popl	%ebx
-	leal	_scan-"L00000000003$pb"(%ebx), %eax
+	leal	_scan-"L00000000005$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	20(%eax), %edx
-	leal	_tospace-"L00000000003$pb"(%ebx), %eax
+	leal	_tospace-"L00000000005$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	cmpl	%eax, %edx
-	je	L32
-	leal	_scan-"L00000000003$pb"(%ebx), %eax
+	je	L46
+	leal	_scan-"L00000000005$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	20(%eax), %edx
-	leal	_scan-"L00000000003$pb"(%ebx), %eax
+	leal	_scan-"L00000000005$pb"(%ebx), %eax
 	movl	%edx, (%eax)
-	leal	_scan-"L00000000003$pb"(%ebx), %eax
+	leal	_scan-"L00000000005$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, (%esp)
 	call	_forward
-	jmp	L35
-L32:
+	jmp	L49
+L46:
 	call	_flip
-L35:
+L49:
 	addl	$20, %esp
 	popl	%ebx
 	leave
@@ -246,33 +314,33 @@ _mem_alloc:
 	pushl	%esi
 	pushl	%ebx
 	subl	$32, %esp
-	call	L41
-"L00000000004$pb":
-L41:
+	call	L55
+"L00000000006$pb":
+L55:
 	popl	%ebx
 	call	_scanner
-	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	16(%eax), %edx
-	leal	_fromspace-"L00000000004$pb"(%ebx), %eax
+	leal	_fromspace-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	cmpl	%eax, %edx
-	jne	L38
-	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
+	jne	L52
+	leal	_free_mem-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %esi
 	movl	$24, (%esp)
 	call	L_malloc$stub
 	movl	%esi, 4(%esp)
 	movl	%eax, (%esp)
 	call	_move
-L38:
-	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
+L52:
+	leal	_free_mem-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	%eax, -12(%ebp)
-	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000006$pb"(%ebx), %eax
 	movl	(%eax), %eax
 	movl	16(%eax), %edx
-	leal	_free_mem-"L00000000004$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000006$pb"(%ebx), %eax
 	movl	%edx, (%eax)
 	movl	-12(%ebp), %eax
 	addl	$32, %esp
@@ -298,11 +366,11 @@ _mem_init:
 	movl	%esp, %ebp
 	pushl	%ebx
 	subl	$36, %esp
-	call	L47
-"L00000000005$pb":
-L47:
+	call	L61
+"L00000000007$pb":
+L61:
 	popl	%ebx
-	leal	LC0-"L00000000005$pb"(%ebx), %eax
+	leal	LC0-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
 	call	L_puts$stub
 	movl	$24, (%esp)
@@ -312,51 +380,51 @@ L47:
 	call	L_malloc$stub
 	movl	%eax, -12(%ebp)
 	cmpl	$0, -16(%ebp)
-	je	L43
+	je	L57
 	cmpl	$0, -12(%ebp)
-	jne	L45
-L43:
+	jne	L59
+L57:
 	movl	$0, (%esp)
 	call	L_exit$stub
-L45:
-	leal	LC1-"L00000000005$pb"(%ebx), %eax
+L59:
+	leal	LC1-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
 	call	L_puts$stub
-	leal	_free_mem-"L00000000005$pb"(%ebx), %edx
+	leal	_free_mem-"L00000000007$pb"(%ebx), %edx
 	movl	-16(%ebp), %eax
 	movl	%eax, (%edx)
-	leal	_fromspace-"L00000000005$pb"(%ebx), %edx
+	leal	_fromspace-"L00000000007$pb"(%ebx), %edx
 	movl	-16(%ebp), %eax
 	movl	%eax, (%edx)
-	leal	_tospace-"L00000000005$pb"(%ebx), %edx
+	leal	_tospace-"L00000000007$pb"(%ebx), %edx
 	movl	-16(%ebp), %eax
 	movl	%eax, (%edx)
-	leal	_scan-"L00000000005$pb"(%ebx), %edx
+	leal	_scan-"L00000000007$pb"(%ebx), %edx
 	movl	-16(%ebp), %eax
 	movl	%eax, (%edx)
-	leal	LC2-"L00000000005$pb"(%ebx), %eax
+	leal	LC2-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
 	call	L_puts$stub
-	leal	_free_mem-"L00000000005$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000007$pb"(%ebx), %eax
 	movl	(%eax), %edx
 	movl	-12(%ebp), %eax
 	movl	%edx, 16(%eax)
-	leal	_free_mem-"L00000000005$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000007$pb"(%ebx), %eax
 	movl	(%eax), %edx
 	movl	-12(%ebp), %eax
 	movl	%edx, 20(%eax)
-	leal	LC3-"L00000000005$pb"(%ebx), %eax
+	leal	LC3-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
 	call	L_puts$stub
-	leal	_free_mem-"L00000000005$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000007$pb"(%ebx), %eax
 	movl	(%eax), %edx
 	movl	-12(%ebp), %eax
 	movl	%eax, 16(%edx)
-	leal	_free_mem-"L00000000005$pb"(%ebx), %eax
+	leal	_free_mem-"L00000000007$pb"(%ebx), %eax
 	movl	(%eax), %edx
 	movl	-12(%ebp), %eax
 	movl	%eax, 20(%edx)
-	leal	LC4-"L00000000005$pb"(%ebx), %eax
+	leal	LC4-"L00000000007$pb"(%ebx), %eax
 	movl	%eax, (%esp)
 	call	L_puts$stub
 	addl	$36, %esp
@@ -367,19 +435,32 @@ L45:
 _object_allocate:
 	pushl	%ebp
 	movl	%esp, %ebp
-	subl	$40, %esp
+	pushl	%ebx
+	subl	$36, %esp
+	call	L68
+"L00000000008$pb":
+L68:
+	popl	%ebx
 	call	_mem_alloc
 	movl	%eax, -12(%ebp)
+	leal	-12(%ebp), %eax
+	movl	%eax, -16(%ebp)
+	leal	_gcstack-"L00000000008$pb"(%ebx), %eax
+	movl	(%eax), %eax
+	movl	%eax, -20(%ebp)
+	leal	_gcstack-"L00000000008$pb"(%ebx), %edx
+	leal	-20(%ebp), %eax
+	movl	%eax, (%edx)
 	movl	8(%ebp), %eax
 	movl	%eax, -28(%ebp)
 	cmpl	$1, -28(%ebp)
-	je	L51
+	je	L65
 	cmpl	$2, -28(%ebp)
-	je	L52
+	je	L66
 	cmpl	$0, -28(%ebp)
-	je	L50
-	jmp	L49
-L50:
+	je	L64
+	jmp	L63
+L64:
 	movl	-12(%ebp), %eax
 	movl	$3, (%eax)
 	movl	-12(%ebp), %edx
@@ -388,8 +469,8 @@ L50:
 	movl	-12(%ebp), %edx
 	movl	16(%ebp), %eax
 	movl	%eax, 8(%edx)
-	jmp	L49
-L51:
+	jmp	L63
+L65:
 	movl	-12(%ebp), %edx
 	movl	12(%ebp), %eax
 	movl	%eax, (%edx)
@@ -397,20 +478,24 @@ L51:
 	movl	$1, 4(%eax)
 	movl	-12(%ebp), %eax
 	movl	$1, 8(%eax)
-	jmp	L49
-L52:
+	jmp	L63
+L66:
+	movl	-12(%ebp), %edx
 	movl	12(%ebp), %eax
 	sall	$2, %eax
-	movl	%eax, %edx
-	orl	$1, %edx
-	movl	-12(%ebp), %eax
-	movl	%edx, (%eax)
+	orl	$1, %eax
+	movl	%eax, (%edx)
 	movl	-12(%ebp), %eax
 	movl	$1, 4(%eax)
 	movl	-12(%ebp), %eax
 	movl	$1, 8(%eax)
-L49:
+L63:
+	movl	-20(%ebp), %edx
+	leal	_gcstack-"L00000000008$pb"(%ebx), %eax
+	movl	%edx, (%eax)
 	movl	-12(%ebp), %eax
+	addl	$36, %esp
+	popl	%ebx
 	leave
 	ret
 .globl _box_fixnum
@@ -598,7 +683,20 @@ _getcdr:
 _string_cons:
 	pushl	%ebp
 	movl	%esp, %ebp
-	subl	$40, %esp
+	pushl	%ebx
+	subl	$36, %esp
+	call	L105
+"L00000000009$pb":
+L105:
+	popl	%ebx
+	leal	-12(%ebp), %eax
+	movl	%eax, -16(%ebp)
+	leal	_gcstack-"L00000000009$pb"(%ebx), %eax
+	movl	(%eax), %eax
+	movl	%eax, -20(%ebp)
+	leal	_gcstack-"L00000000009$pb"(%ebx), %edx
+	leal	-20(%ebp), %eax
+	movl	%eax, (%edx)
 	movl	8(%ebp), %eax
 	movl	%eax, (%esp)
 	call	_string_cons
@@ -613,13 +711,17 @@ _string_cons:
 	movl	%eax, (%esp)
 	call	_cons
 	movl	%eax, -12(%ebp)
+	movl	-12(%ebp), %edx
 	movl	-12(%ebp), %eax
 	movl	(%eax), %eax
-	movl	%eax, %edx
-	orl	$16, %edx
-	movl	-12(%ebp), %eax
+	orl	$16, %eax
+	movl	%eax, (%edx)
+	movl	-20(%ebp), %edx
+	leal	_gcstack-"L00000000009$pb"(%ebx), %eax
 	movl	%edx, (%eax)
 	movl	-12(%ebp), %eax
+	addl	$36, %esp
+	popl	%ebx
 	leave
 	ret
 .globl _is_eq
@@ -642,122 +744,49 @@ _is_int_eq:
 	movl	%eax, (%esp)
 	call	_is_number
 	testl	%eax, %eax
-	je	L93
+	je	L109
 	movl	12(%ebp), %eax
 	movl	%eax, (%esp)
 	call	_is_number
 	testl	%eax, %eax
-	je	L93
+	je	L109
 	movl	8(%ebp), %eax
 	cmpl	12(%ebp), %eax
 	sete	%al
 	movzbl	%al, %eax
 	movl	%eax, -12(%ebp)
-	jmp	L96
-L93:
+	jmp	L112
+L109:
 	movl	$0, -12(%ebp)
-L96:
+L112:
 	movl	-12(%ebp), %eax
 	leave
 	ret
-	.cstring
-LC5:
-	.ascii "In add_root\0"
-LC6:
-	.ascii "Root not null\0"
-LC7:
-	.ascii "End add_root\0"
-	.text
-.globl _add_root
-_add_root:
+.globl _smaller
+_smaller:
 	pushl	%ebp
 	movl	%esp, %ebp
-	pushl	%ebx
-	subl	$36, %esp
-	call	L103
-"L00000000006$pb":
-L103:
-	popl	%ebx
-	leal	LC5-"L00000000006$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
+	subl	$40, %esp
 	movl	8(%ebp), %eax
-	xorl	$1, %eax
-	andl	$1, %eax
+	movl	%eax, (%esp)
+	call	_is_number
 	testl	%eax, %eax
-	je	L102
-	movl	$8, (%esp)
-	call	L_malloc$stub
-	movl	%eax, -12(%ebp)
-	cmpl	$0, -12(%ebp)
-	je	L102
-	leal	LC6-"L00000000006$pb"(%ebx), %eax
+	je	L115
+	movl	12(%ebp), %eax
 	movl	%eax, (%esp)
-	call	L_puts$stub
-	movl	8(%ebp), %edx
-	movl	-12(%ebp), %eax
-	movl	%edx, 4(%eax)
-	leal	_pro_cell-"L00000000006$pb"(%ebx), %eax
-	movl	(%eax), %edx
-	movl	-12(%ebp), %eax
-	movl	%edx, (%eax)
-	leal	_pro_cell-"L00000000006$pb"(%ebx), %edx
-	movl	-12(%ebp), %eax
-	movl	%eax, (%edx)
-	leal	LC7-"L00000000006$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
-L102:
-	addl	$36, %esp
-	popl	%ebx
-	leave
-	ret
-	.cstring
-LC8:
-	.ascii "In remove_root\0"
-LC9:
-	.ascii "In remove_root1\0"
-LC10:
-	.ascii "In remove_root2\0"
-LC11:
-	.ascii "End remove_root\0"
-	.text
-.globl _remove_root
-_remove_root:
-	pushl	%ebp
-	movl	%esp, %ebp
-	pushl	%ebx
-	subl	$36, %esp
-	call	L108
-"L00000000007$pb":
-L108:
-	popl	%ebx
-	leal	LC8-"L00000000007$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
-	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
-	movl	(%eax), %eax
+	call	_is_number
 	testl	%eax, %eax
-	je	L107
-	leal	_pro_cell-"L00000000007$pb"(%ebx), %eax
-	movl	(%eax), %eax
-	movl	(%eax), %eax
+	je	L115
+	movl	8(%ebp), %eax
+	cmpl	12(%ebp), %eax
+	setl	%al
+	movzbl	%al, %eax
 	movl	%eax, -12(%ebp)
-	leal	LC9-"L00000000007$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
-	leal	LC10-"L00000000007$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
-	leal	_pro_cell-"L00000000007$pb"(%ebx), %edx
+	jmp	L118
+L115:
+	movl	$0, -12(%ebp)
+L118:
 	movl	-12(%ebp), %eax
-	movl	%eax, (%edx)
-	leal	LC11-"L00000000007$pb"(%ebx), %eax
-	movl	%eax, (%esp)
-	call	L_puts$stub
-L107:
-	addl	$36, %esp
-	popl	%ebx
 	leave
 	ret
 	.section __IMPORT,__jump_table,symbol_stubs,self_modifying_code+pure_instructions,5

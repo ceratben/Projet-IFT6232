@@ -95,7 +95,7 @@
 						  code )
 						 def-code))
 				 )
-				 l-name
+				 (gen-call-global l-name)
 				 )))
 
 	((eq? expr '__void) "") ; Ne rien faire si c'est une terminaison de begin.
@@ -267,6 +267,23 @@
               (eq? (list-ref expr 0) 'cons))
 	 (gen-cons (comp-expr (cadr expr) fs cte rte) (comp-expr (caddr expr) fs cte rte)))
 
+	((and (list? expr)
+              (= (length expr) 3)
+              (eq? (list-ref expr 0) '<))
+	 (gen-C-bin 
+	  (comp-expr (list-ref expr 2) fs cte rte)
+	  (comp-expr (list-ref expr 1) fs cte rte)
+	  "_smaller"))
+
+	((and (list? expr)
+              (= (length expr) 2)
+              (eq? (list-ref expr 0) 'null?))
+	 (gen-unary 
+	  (comp-expr (list-ref expr 1) fs cte rte)
+	  "_is_null"))
+
+
+
 	;; Equal, eq and =
 	((and (list? expr)
               (= (length expr) 3)
@@ -293,7 +310,22 @@
 	;; Call
 	((list? expr)
 	 (let ((data (map (lambda (x) (comp-expr x (+ fs (length (cdr expr))) cte rte)) expr))) 
-	 (gen-call  (car data) (cdr data))))
+	   (cond 
+					        ; A voir Borked
+	    ((and
+	      (symbol? (car expr))              ; Cas variable	      
+	      (member (car expr) cte))
+	     (gen-call (car data) (cdr data))   ; Global
+	     )                                  
+	    ((and (list? (car expr)) (eq? (car (car expr)) 'lambda))
+					        ; Cas lambda
+	     (gen-call (list "    call   " (car data) "\n") (cdr data)))
+	    (else
+	     (gen-call (list (car data)
+			     "    call    *%eax\n")
+		       (cdr data))
+					; Cas return
+	      ))))
 
         (else
          (error "comp-expr cannot handle expression"))))
@@ -348,50 +380,74 @@
 		)))
 (define (gen-set v x) (gen-eq v x "_setcar_ptr"))
 (define (gen-lambda name) name);(gen "    movl " name ", %eax\n")) Changer pour mover le nom dans eax.
+
+(define (filter-sym c l) 
+  (if (null? l)
+      '()
+      (if (c (car l))
+	  (filter-sym (cdr l))
+	  (cons (car l) (filter-sym (cdr l))))
+      ))
+
 (define (gen-call fun args)
-	(flatten 
-	 (gen (map push-arg args)
-	      (if (symbol? fun)
-		  (gen "    call    " fun "\n")
-		  fun)
-	      "    pushl   %eax\n"
-	      (map pop-arg args)
-	      "    pop     %eax\n"
-	      "    addl $" (* 4 (length args)) ", %esp\n" 
-	      )))
+	    (flatten 
+	     (gen (map push-arg args)
+		  (if (symbol? fun)
+		      (gen "    call    " fun "\n")
+		      fun)
+		  ;"    pushl   %eax\n"
+		  ;(map pop-arg args)
+		  ;"    pop     %eax\n"
+		  "    addl    $" (* 4 (length args)) ", %esp\n" 
+		  )))
 
 (define (push-arg arg)
 	(let ((c (if (symbol? arg)
-		     (gen "    movl    " arg " , %eax\n")
+		     (gen "    movl    $" arg " , %eax\n")
 		     arg)))
 	 (gen ;(gen-unary arg "_add_root") <- Ridiculement stupide...
-	  (align 1)
 	  c
 	  "    pushl   %eax\n"
-	  "    call    _add_root\n"
-	  "    leave\n"
-	  c
-	  "    pushl   %eax\n"
+	  (if (symbol? arg)
+	      ""
+	      (gen
+	       (align 1)
+	       "    pushl   %eax\n"
+	       "    call    _add_root\n"
+	       "    leave\n"))
+
 	  )))
 
 (define (pop-arg n) 
+  (if (symbol? n)
+      ""
       (gen 
        (align 0)
        "    call    _remove_root\n"
        "    leave\n")
-   )
+   ))
+
+(define unbox "    shrl    $2, %eax \n")
 
 (define (gen-bin-op oper opnd1 opnd2)
-  (gen (gen-unary opnd1 "_unbox_fixnum")
+  (gen opnd1 
+       unbox				;(gen-unary opnd1 "_unbox_fixnum")
        "    pushl   %eax\n"
-       (gen-unary opnd2 "_unbox_fixnum")
+					;(gen-unary opnd2 "_unbox_fixnum")
+       opnd2
+       unbox
        "    " oper "l    (%esp), %eax\n"
+       "    imull    $4 , %eax\n"
+       "    addl     $1 , %eax\n"
+					;"    pushl    %eax\n"
+					;(gen-unary "" "_box_fixnum")
+					;"    pop      %eax\n"
        "    addl    $4, %esp\n"))
 
 (define (gen-car x) (gen-unary x "_getcar_ptr")) 
 (define (gen-cdr x) (gen-unary x "_getcdr_ptr")) 
 (define (gen-cons a d) (gen-eq a d "_cons"))
-(define gen-null '_null)
+(define gen-null "    call    _null\n")
 
 (define (align count) 
   (if (= count 0)
@@ -405,16 +461,27 @@
        "    subl     $24, %esp\n")))
 
 (define (gen-unary x name) 
-  (gen (align 1) (push-arg x) "    call    " name "\n" "    leave \n"))
+  (gen 
+   (align 1) 
+   (push-arg x) 
+   "    call    " name "\n" 
+   ;"    pushl    %eax\n"
+   ;(pop-arg x)
+   ;"    pop      %eax\n"
+   "    leave \n"))
 
 (define (gen-eq arg1 arg2 name) 
   (gen-C-bin arg1 arg2 name))
 
 (define (gen-C-bin arg1 arg2 name)
   (gen  (align 2)
-	(push-arg arg1)
 	(push-arg arg2)
+	(push-arg arg1)
 	"    call    "name "\n"
+	;"    pushl    %eax\n"
+	;(pop-arg arg2)
+	;(pop-arg arg1)
+	;"    pop      %eax\n"
 	"    leave\n"
        ))
 
@@ -430,7 +497,11 @@
 (define (gen-literal n)
   (gen "    movl    $" n ", %eax\n"))
 
-(define (gen-number n) (gen-unary (gen "    movl $" n ", %eax\n") "_box_fixnum"))
+(define (gen-number n) 
+	 (gen "    movl    $" (+ (* 4 n) 1) ", %eax\n"))
+  ;(gen-unary 
+  ; (gen "    movl    $" n ", %eax\n") 
+  ; "_box_fixnum"))
 
 ;; Main program:
 
@@ -446,11 +517,11 @@
     (let ((code
 	   (translate
 	    (const-prop
-	     (expand-program
-	      (closure-conversion
+	     ;(expand-program
+	      ;(closure-conversion
 	       (alpha-conv
 		(exec-include
-		 (expand-program ast)))))))))
+		 (expand-program ast)))))));))
       (with-output-to-file
           (string-append (path-strip-extension source-filename) ".s")
         (lambda ()

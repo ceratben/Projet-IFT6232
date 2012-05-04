@@ -3,7 +3,9 @@
 #define STRING_TAG 0x10
 #define IS_STRING(p) ((p & STRING_TAG) != 0)
 
-word box_fixnum(word w){return BOX(w);}
+word box_fixnum(word w){
+  //printf("w: %u",w);
+  return BOX(w);}
 word unbox_fixnum(word w){return UNBOX(w);}
 
 Block* cons(word car, word cdr){
@@ -33,8 +35,11 @@ word getcar(Block *b) {return UNBOX(b->car);}
 word getcdr(Block *b) {return UNBOX(b->cdr);}
 
 Block * string_cons(char * s){
-  Block * n = cons(BOX(*(s++)), (word)string_cons(s));
+  Block * n;
+  GCPRO(n, nlocal);
+  n = cons(BOX(*(s++)), (word)string_cons(s));
   n->header |= STRING_TAG;
+  UNGCPRO(nlocal);
   return n;
 }
 
@@ -45,44 +50,31 @@ int is_int_eq(word * a, word * b) {
   return 0;
 }
 
-void add_root(word * r){
-  printf("In add_root\n");
-  //printf("r: %p\n", r);
-
-  if(!IS_POINTER((word) r)) return;
-
-  // The add of the block is the add of the wagon.
-  // Create a new list element for the root
-  List * root = (List*) malloc(sizeof(List));
-  if(root == NULL) return;
-
-  printf("Root not null\n");
-  root->cell = (Wagon *) r;
-
-  // Add the root to pro_cell
-  //pro_cell->next = root;
-  root->next = pro_cell;
-  pro_cell = root;
-  //printf("r: %p\n", r);
-  printf("End add_root\n");
-}
-
-void remove_root() {
-  // Libère la racine
-  printf("In remove_root\n");
-  if(pro_cell == NULL) return;
-  List * t = pro_cell->next;
-  printf("In remove_root1\n");
-  //free(pro_cell);
-  printf("In remove_root2\n");
-  // Pop
-  pro_cell = t;
-  printf("End remove_root\n");
-}
-
-/*int main(){
-  add_root(0xF0);
-  remove_root();
+int smaller(word a, word b){
+  if(is_number(a) && is_number(b))
+    return a<b;
   return 0;
 }
+
+//void test(word w){
+//  GCPRO(w, wlocal);
+//  printgc();
+//  UNGCPRO(wlocal);
+//}
+
+/*
+int main(){
+  //add_root(0xF0);
+  //remove_root();
+  //test(0xF);
+  //printgc();
+  //printf("123: %u\n", box_fixnum(2));
+  //printf("123: %u\n", unbox_fixnum(box_fixnum(2)));
+  mem_init();
+  printf("Begin\n");
+  cons(1,0);
+  printf("End\n");
+  return 0;
+}
+
 */
