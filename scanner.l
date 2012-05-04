@@ -3,7 +3,7 @@
 sign   [-+]
 digit  [0-9]
 letter [a-zA-Z]
-other  [_*/$!@<=>%]
+other  [_*/$!@<=>%?]
 ident  ({sign}|({letter}|{other})({letter}|{other}|{sign}|{digit})*)
 text   [^"]*
 

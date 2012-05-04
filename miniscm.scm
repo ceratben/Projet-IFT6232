@@ -172,7 +172,7 @@
 		     (set! def-code 
 			   (cons (gen-global 
 				  name
-				  (let ((c (comp-expr (list-ref (car x) 2) (+ fs 1) cte rte)))
+				  (let ((c (comp-expr (list-ref (car x) 2) fs cte rte)))
 				    (if (symbol? c)
 					(list "    call    " c "\n")
 					c))) 
@@ -230,14 +230,16 @@
         ((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'lambda))
-	 (let ((arg (reverse (list-ref expr 1))) (l-name (gensym)))
+	 ; Reverse ici
+	 (let ((arg (list-ref expr 1)) (l-name (gensym)))
 	   (begin
 	   ;;; push les args dans env
 	     (let loop ((n 1))
 	       (and (<= n (length arg))
 		   (begin
+		     (pp (list fs n))
 		     (set! cte (append (cons (list-ref arg (- n 1)) '()) cte))
- 		     (set! rte (append (cons  (- (- n 1)) '()) rte))
+ 		     (set! rte (append (cons  (- n) '()) rte))
 		     (loop (+ n 1)))
 		   ))
 	     ;; Creer les blocs assembleurs associés.
@@ -307,14 +309,16 @@
         ((and (list? expr)
               (= (length expr) 3)
               (member (list-ref expr 0) '(+ - * /)))
-         (gen-bin-op
-          (case (list-ref expr 0)
-            ((+) "add")
-            ((-) "sub")
-            ((*) "imul")
-            ((/) "idiv"))
-          (comp-expr (list-ref expr 2) fs cte rte)
-          (comp-expr (list-ref expr 1) (+ fs 1) cte rte)))
+         (if (and (number? (list-ref expr 1)) (number? (list-ref expr 2)))
+	     (let ((val (eval expr))) (gen-number val))
+	     (gen-bin-op
+	      (case (list-ref expr 0)
+		((+) "add")
+		((-) "sub")
+		((*) "imul")
+		((/) "idiv"))
+	      (comp-expr (list-ref expr 2) fs cte rte)
+	      (comp-expr (list-ref expr 1) (+ fs 1) cte rte))))
 
 	;; Call
 	((list? expr)
@@ -340,7 +344,6 @@
          (error "comp-expr cannot handle expression"))))
 
 ;;; Code generation for x86-32 using GNU as syntax
-
 (define gen list)
 
 (define gen-externs 
