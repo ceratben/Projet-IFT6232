@@ -172,7 +172,7 @@
 		     (set! def-code 
 			   (cons (gen-global 
 				  name
-				  (let ((c (comp-expr (list-ref (car x) 2) fs cte rte)))
+				  (let ((c (comp-expr (list-ref (car x) 2) (+ fs 1) cte rte)))
 				    (if (symbol? c)
 					(list "    call    " c "\n")
 					c))) 
@@ -185,7 +185,8 @@
 		      (eq? (list-ref (car x) 0) 'set!))
 		 (begin
 		   ;; Semble louche, a revoir.
-		   (gen-set (list-ref (car x) 1) (comp-expr (list-ref (car x) 2) fs cte rte))
+		   (gen-set (comp-expr (list-ref (car x) 1) (+ fs 1) cte rte) 
+			    (comp-expr (list-ref (car x) 2) (+ fs 1) cte rte))
 		   (loop (cdr x))))
 		
 		(else (list 
@@ -236,7 +237,7 @@
 	       (and (<= n (length arg))
 		   (begin
 		     (set! cte (append (cons (list-ref arg (- n 1)) '()) cte))
- 		     (set! rte (append (cons  (- (+ fs n)) '()) rte))
+ 		     (set! rte (append (cons  (- (- n 1)) '()) rte))
 		     (loop (+ n 1)))
 		   ))
 	     ;; Creer les blocs assembleurs associés.
@@ -255,31 +256,39 @@
 	((and (list? expr)
               (= (length expr) 2)
               (eq? (list-ref expr 0) 'car))
-	 (gen-car (comp-expr (cadr expr) fs cte rte)))
+	 (gen-car (comp-expr (cadr expr) (+ fs 1) cte rte)))
 
 	((and (list? expr)
               (= (length expr) 2)
               (eq? (list-ref expr 0) 'cdr))
-	 (gen-cdr (comp-expr (cadr expr) fs cte rte)))
+	 (gen-cdr (comp-expr (cadr expr) (+ fs 1) cte rte)))
 	
 	((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) 'cons))
-	 (gen-cons (comp-expr (cadr expr) fs cte rte) (comp-expr (caddr expr) fs cte rte)))
+	 (gen-cons (comp-expr (cadr expr) (+ fs 1) cte rte) (comp-expr (caddr expr) (+ fs 1) cte rte)))
 
 	((and (list? expr)
               (= (length expr) 3)
               (eq? (list-ref expr 0) '<))
 	 (gen-C-bin 
-	  (comp-expr (list-ref expr 2) fs cte rte)
-	  (comp-expr (list-ref expr 1) fs cte rte)
+	  (comp-expr (list-ref expr 2) (+ fs 1) cte rte)
+	  (comp-expr (list-ref expr 1) (+ fs 1) cte rte)
 	  "_smaller"))
+
+	((and (list? expr)
+              (= (length expr) 3)
+              (eq? (list-ref expr 0) '>))
+	 (gen-C-bin 
+	  (comp-expr (list-ref expr 2) (+ fs 1) cte rte)
+	  (comp-expr (list-ref expr 1) (+ fs 1) cte rte)
+	  "_greater"))
 
 	((and (list? expr)
               (= (length expr) 2)
               (eq? (list-ref expr 0) 'null?))
 	 (gen-unary 
-	  (comp-expr (list-ref expr 1) fs cte rte)
+	  (comp-expr (list-ref expr 1) (+ fs 1) cte rte)
 	  "_is_null"))
 
 
@@ -289,8 +298,8 @@
               (= (length expr) 3)
               (or (eq? (list-ref expr 0) 'eq?) (eq? (list-ref expr 0) '=)))
 	 (gen-eq
-	  (comp-expr (list-ref expr 1) fs cte rte)
-	  (comp-expr (list-ref expr 2) fs cte rte)
+	  (comp-expr (list-ref expr 1) (+ fs 1) cte rte)
+	  (comp-expr (list-ref expr 2) (+ fs 1) cte rte)
 	  (if (eq? (list-ref expr 0) 'eq?) "_is_eq" "_is_int_eq")
 	  ))
 
@@ -408,7 +417,7 @@
 	 (gen ;(gen-unary arg "_add_root") <- Ridiculement stupide...
 	  c
 	  "    pushl   %eax\n"
-	  (if (symbol? arg)
+	  (if #t;(symbol? arg)
 	      ""
 	      (gen
 	       (align 1)
@@ -446,8 +455,13 @@
 
 (define (gen-car x) (gen-unary x "_getcar_ptr")) 
 (define (gen-cdr x) (gen-unary x "_getcdr_ptr")) 
-(define (gen-cons a d) (gen-eq a d "_cons"))
-(define gen-null "    call    _null\n")
+(define (gen-cons a d) 
+  (gen (gen-eq a d "_cons")
+       ;"    pushl    %eax\n"
+       ;(gen-unary "" "_add_root")
+       ;"    pop      %eax\n"
+       ))
+(define gen-null "    movl    $0, %eax\n");"    call    _null\n")
 
 (define (align count) 
   (if (= count 0)
@@ -462,8 +476,12 @@
 
 (define (gen-unary x name) 
   (gen 
+   (if (symbol? x)
+       (gen "    movl    $" x " , %eax\n")
+       x)
    (align 1) 
-   (push-arg x) 
+   ;(push-arg x)
+   "    pushl   %eax\n"
    "    call    " name "\n" 
    ;"    pushl    %eax\n"
    ;(pop-arg x)
@@ -474,9 +492,18 @@
   (gen-C-bin arg1 arg2 name))
 
 (define (gen-C-bin arg1 arg2 name)
-  (gen  (align 2)
-	(push-arg arg2)
-	(push-arg arg1)
+  (gen  (if (symbol? arg2)
+	    (gen "    movl    $" arg2 " , %eax\n")
+	    arg2)
+	"    movl    %eax , %edx\n"
+	(if (symbol? arg1)
+	    (gen "    movl    $" arg1 " , %eax\n")
+	    arg1)
+	(align 2)
+	;(push-arg arg2)
+	;(push-arg arg1)
+	"    pushl    %edx\n"
+	"    pushl    %eax\n"
 	"    call    "name "\n"
 	;"    pushl    %eax\n"
 	;(pop-arg arg2)
@@ -517,11 +544,11 @@
     (let ((code
 	   (translate
 	    (const-prop
-	     ;(expand-program
-	      ;(closure-conversion
+	     (expand-program
+	      (closure-conversion
 	       (alpha-conv
 		(exec-include
-		 (expand-program ast)))))));))
+		 (expand-program ast)))))))))
       (with-output-to-file
           (string-append (path-strip-extension source-filename) ".s")
         (lambda ()

@@ -104,7 +104,7 @@
     '(begin
        ;;(define make-closure list-macro)
        (define closure-code (lambda (clo) (car clo)))
-       (define closure-ref (lambda (clo i) (if (= i 0) (car clo) (closure-ref (cdr clo) (- i 1)))))
+       (define closure-ref (lambda (clo i) (if (= i 0) (car (cdr clo)) (closure-ref (cdr clo) (- i 1)))))
        )
     (map closure-conv (list ast)) )) ; Erreur ici
 
